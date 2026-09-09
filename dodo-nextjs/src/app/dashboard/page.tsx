@@ -233,33 +233,55 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="flex gap-4 mt-4 flex-wrap">
-                      {Object.entries(BOARD_LABELS).map(([board, label]) => (
-                        <div key={board} className="text-sm">
-                          <span className="text-muted-foreground">{label}: </span>
-                          <span className="text-foreground font-medium tabular-nums">
-                            {item.ranks[board] != null
-                              ? `#${item.ranks[board]}`
-                              : "—"}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Clicks: </span>
-                        <span className="text-foreground font-medium tabular-nums">
-                          {l.click_count} ({totalClicks} tracked)
-                        </span>
+                    {/* Quick Metrics Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Total Clicks</p>
+                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">{l.click_count.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{totalClicks} in 30d window</p>
+                      </div>
+
+                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Effective CPC</p>
+                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                          {l.click_count > 0 ? `$${(l.total_bid / l.click_count).toFixed(2)}` : "—"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">per tracked click</p>
+                      </div>
+
+                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ranks (All / 24h / UTC)</p>
+                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                          #{item.ranks["all-time"] ?? "—"} <span className="text-xs text-muted-foreground font-normal">/ #{item.ranks["today"] ?? "—"} / #{item.ranks["daily"] ?? "—"}</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">All-Time · Today · Daily</p>
+                      </div>
+
+                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Destination</p>
+                        <a
+                          href={`/api/go/${l.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-primary hover:underline truncate block mt-1"
+                          title="Test your live tracked redirect link"
+                        >
+                          {l.url.includes("x.com") || l.url.includes("twitter.com") || l.url.startsWith("@")
+                            ? `𝕏 @${l.url.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "").replace(/^@/, "").replace(/\/+$/, "")}`
+                            : l.url.replace(/^https?:\/\//, "").replace(/\/+$/, "")} ↗
+                        </a>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">verified redirect</p>
                       </div>
                     </div>
 
-                    <div className="mt-3 text-sm">
+                    <div className="mt-3 text-xs flex items-center gap-2">
                       {item.ad_live ? (
-                        <span className="text-amber-300">
-                          👑 Sponsor slot LIVE until 00:00 UTC
+                        <span className="text-amber-400 font-semibold flex items-center gap-1">
+                          👑 Sponsor slot LIVE on homepage until 00:00 UTC
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          Sponsor slot: win #1 before midnight UTC to go live.
+                          👑 Homepage Sponsor slot: outbid #1 before midnight UTC to take the crown.
                         </span>
                       )}
                     </div>

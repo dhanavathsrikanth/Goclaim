@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     if (!existingListing) {
       const newListing = {
         id: listingId,
-        url: url.trim(),
+        url: url.trim().startsWith("@") ? `https://x.com/${url.trim().slice(1).trim()}` : url.trim(),
         normalized_url: normalizedUrl,
         product_name: productName,
         description,

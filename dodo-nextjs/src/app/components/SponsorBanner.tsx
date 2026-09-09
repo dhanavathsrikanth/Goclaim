@@ -28,8 +28,16 @@ export default function SponsorBanner({ sponsor, validUntil }: Props) {
     return () => clearInterval(t);
   }, [validUntil]);
 
+  const handleBannerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("a, button")) return;
+    window.open(`/api/go/${sponsor.listing_id}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
-    <div className="mb-6 rounded-2xl border border-[#e57255]/30 bg-[#e57255]/8 p-4 sm:p-5 text-left shadow-2xs backdrop-blur-xs">
+    <div
+      onClick={handleBannerClick}
+      className="mb-6 rounded-2xl border border-[#e57255]/30 bg-[#e57255]/8 p-4 sm:p-5 text-left shadow-2xs backdrop-blur-xs cursor-pointer hover:border-[#e57255]/60 hover:bg-[#e57255]/12 transition-all group"
+    >
       <div className="flex items-center justify-between mb-3">
         <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#e57255]">
           <span>👑</span> Active Daily Sponsor
