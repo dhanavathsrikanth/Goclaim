@@ -1,29 +1,61 @@
-export function normalizeUrl(input: string): string {
-  let url = input.trim();
+export function extractXHandle(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
 
-  if (url.startsWith("@")) {
-    return `https://x.com/${url.slice(1).trim().toLowerCase()}`;
+  if (trimmed.startsWith("@")) {
+    const handle = trimmed.slice(1).trim().replace(/^\/+/, "");
+    return /^[a-zA-Z0-9_]{1,15}$/.test(handle) ? handle : null;
   }
 
+  let urlStr = trimmed;
+  if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+    urlStr = "https://" + urlStr;
+  }
+
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "x.com" || host === "twitter.com") {
+      const cleanPath = parsed.pathname.replace(/^\/+@?/, "").replace(/\/+$/, "");
+      const segments = cleanPath.split("/").filter(Boolean);
+      if (segments.length === 1 && /^[a-zA-Z0-9_]{1,15}$/.test(segments[0])) {
+        return segments[0];
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function isXHandle(input: string): boolean {
+  return extractXHandle(input) !== null;
+}
+
+export function normalizeUrl(input: string): string {
+  const trimmed = input.trim();
+
+  const handle = extractXHandle(trimmed);
+  if (handle) {
+    return `https://x.com/${handle.toLowerCase()}`;
+  }
+
+  let url = trimmed;
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = "https://" + url;
   }
 
   try {
     const parsed = new URL(url);
-    parsed.pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "twitter.com") {
+      parsed.hostname = "x.com";
+    }
+    parsed.pathname = parsed.pathname.replace(/^\/+@?/, "/").replace(/\/+$/, "") || "/";
     return parsed.origin + parsed.pathname.toLowerCase();
   } catch {
     return url.toLowerCase();
   }
-}
-
-export function isXHandle(input: string): boolean {
-  const trimmed = input.trim();
-  if (trimmed.startsWith("@")) {
-    return /^[a-zA-Z0-9_]{1,15}$/.test(trimmed.slice(1));
-  }
-  return /^https?:\/\/(www\.)?(x\.com|twitter\.com)\/[a-zA-Z0-9_]{1,15}\/?$/i.test(trimmed);
 }
 
 export function isValidUrlOrDomain(input: string): boolean {
@@ -67,12 +99,8 @@ export function extractFaviconDomain(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  if (trimmed.startsWith("@")) {
-    const handle = trimmed.slice(1);
-    if (/^[a-zA-Z0-9_]{1,15}$/.test(handle)) {
-      return "x.com";
-    }
-    return null;
+  if (extractXHandle(trimmed)) {
+    return "x.com";
   }
 
   let urlStr = trimmed;
@@ -97,6 +125,11 @@ export function extractFaviconDomain(input: string): string | null {
 }
 
 export function extractDisplayUrl(normalizedUrl: string): string {
+  const handle = extractXHandle(normalizedUrl);
+  if (handle) {
+    return `@${handle}`;
+  }
+
   try {
     const parsed = new URL(normalizedUrl);
     return parsed.hostname + parsed.pathname.replace(/\/$/, "");

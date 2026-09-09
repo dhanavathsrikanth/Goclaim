@@ -8,6 +8,8 @@ import {
 } from "@/lib/data";
 import { announceTakeover } from "@/lib/composio";
 import { verifyDodoWebhook, isLiveWebhookSecret } from "@/lib/dodoWebhook";
+import { processOutbidAlerts } from "@/lib/outbidAlerts";
+import { processMilestoneSocialAlert } from "@/lib/socialBot";
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,6 +78,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
+      const previousTotalBid = listing.total_bid;
       listing.total_bid += payment.amount;
       listing.status = "confirmed";
       listing.updated_at = new Date().toISOString();
@@ -92,15 +95,27 @@ export async function POST(req: NextRequest) {
         `Payment confirmed: $${payment.amount} for listing ${listing.id} (${listing.normalized_url}). New total: $${listing.total_bid}`
       );
 
-      // Trigger Composio takeover announcement if new #1
+      // Trigger Outbid Alerts to overtaken founders
+      try {
+        await processOutbidAlerts(listing, previousTotalBid);
+      } catch (alertErr) {
+        console.warn("Outbid alert processing warning:", alertErr);
+      }
+
+      // Trigger Composio takeover announcement and Automated Social Amplification (Milestone Tweet)
       try {
         const topBoard = await getBoardListings("all-time");
         if (topBoard.length > 0 && topBoard[0].id === listing.id) {
           const prevLead = topBoard[1]?.product_name;
           await announceTakeover(listing, prevLead);
         }
+
+        const newRank = topBoard.findIndex((l) => l.id === listing.id) + 1;
+        const previousRank =
+          topBoard.filter((l) => l.id !== listing.id && l.total_bid >= previousTotalBid).length + 1;
+        await processMilestoneSocialAlert(listing, previousRank, newRank);
       } catch (socialErr) {
-        console.warn("Takeover social announcement error:", socialErr);
+        console.warn("Social amplification warning:", socialErr);
       }
     }
 

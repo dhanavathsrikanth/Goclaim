@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPaymentById, getListingById, upsertPayment, upsertListing } from "@/lib/data";
+import { getPaymentById, getListingById, upsertPayment, upsertListing, getBoardListings } from "@/lib/data";
 import { createClaimToken } from "@/lib/claim";
+import { processOutbidAlerts } from "@/lib/outbidAlerts";
+import { processMilestoneSocialAlert } from "@/lib/socialBot";
 
 // Exchanges a (listing, pay) pair for a dashboard claim token.
 // The pay id is an unguessable random value delivered only to the payer
@@ -29,6 +31,7 @@ export async function GET(req: NextRequest) {
       await upsertPayment(payment);
       const listing = await getListingById(listingId);
       if (listing) {
+        const previousTotalBid = listing.total_bid;
         listing.total_bid += payment.amount;
         listing.status = "confirmed";
         listing.updated_at = new Date().toISOString();
@@ -36,6 +39,20 @@ export async function GET(req: NextRequest) {
           listing.claim_email = "test@example.com";
         }
         await upsertListing(listing);
+        try {
+          await processOutbidAlerts(listing, previousTotalBid);
+        } catch (e) {
+          console.warn("Outbid alert error:", e);
+        }
+        try {
+          const topBoard = await getBoardListings("all-time");
+          const newRank = topBoard.findIndex((l) => l.id === listing.id) + 1;
+          const previousRank =
+            topBoard.filter((l) => l.id !== listing.id && l.total_bid >= previousTotalBid).length + 1;
+          await processMilestoneSocialAlert(listing, previousRank, newRank);
+        } catch (e) {
+          console.warn("Milestone social error:", e);
+        }
       }
     } else {
       return NextResponse.json(

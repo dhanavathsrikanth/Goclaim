@@ -9,6 +9,7 @@ import SponsorBanner from "./components/SponsorBanner";
 import LogoWall from "./components/LogoWall";
 import MilestoneStrip from "./components/MilestoneStrip";
 import ActivityFeed from "./components/ActivityFeed";
+import CategoryIcon from "./components/CategoryIcon";
 import type { Listing, BoardType, SponsorEntry } from "@/lib/types";
 import { extractDisplayUrl } from "@/lib/normalize";
 
@@ -63,9 +64,40 @@ export default function Home() {
   }, [board, category]);
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("board");
+    const search = new URLSearchParams(window.location.search);
+    const q = search.get("board");
     if (q === "today" || q === "daily" || q === "all-time") setBoard(q);
+    const cat = search.get("category");
+    if (cat) setCategory(cat);
   }, []);
+
+  const handleCategoryChange = (cat: string) => {
+    setCategory(cat);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (cat === "All") {
+        params.delete("category");
+      } else {
+        params.set("category", cat);
+      }
+      const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.replaceState(null, "", newUrl);
+    } catch {}
+  };
+
+  const handleBoardChange = (b: BoardType) => {
+    setBoard(b);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (b === "all-time") {
+        params.delete("board");
+      } else {
+        params.set("board", b);
+      }
+      const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.replaceState(null, "", newUrl);
+    } catch {}
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -110,17 +142,24 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const raiseId = new URLSearchParams(window.location.search).get("raise");
+    const searchParams = new URLSearchParams(window.location.search);
+    const raiseId = searchParams.get("raise");
+    const requestedAmount = searchParams.get("amount");
     if (!raiseId) return;
     fetch(`/api/listing/${encodeURIComponent(raiseId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.listing) {
+          const targetAmount = requestedAmount && Number(requestedAmount) > d.listing.total_bid
+            ? requestedAmount
+            : String(d.listing.total_bid + 1);
           setPrefill({
             url: d.listing.url,
-            amount: String(d.listing.total_bid + 1),
+            amount: targetAmount,
           });
           document.getElementById("claim")?.scrollIntoView({ behavior: "smooth" });
+          const input = document.getElementById("identity");
+          if (input) setTimeout(() => input.focus(), 300);
         }
       })
       .catch(() => {});
@@ -205,14 +244,8 @@ export default function Home() {
         </aside>
       )}
 
-      <div className="mt-2">
-        <BoardSwitcher active={board} onChange={setBoard} />
-      </div>
-
-      <div className="mt-6">
-        {sponsorData?.sponsor && (
-          <SponsorBanner sponsor={sponsorData.sponsor} validUntil={sponsorData.valid_until} />
-        )}
+      {/* 1. Hero Claim Form & Heading at the very top */}
+      <div className="mt-4 sm:mt-6">
         <BidForm
           key={prefill ? `raise-${prefill.url}` : "default"}
           topBid={topBidAll}
@@ -227,6 +260,18 @@ export default function Home() {
           initialUrl={prefill?.url}
         />
       </div>
+
+      {/* 2. Board Switcher */}
+      <div className="mt-6 sm:mt-8">
+        <BoardSwitcher active={board} onChange={handleBoardChange} />
+      </div>
+
+      {/* 3. Daily Sponsor Banner (if present, placed below switcher) */}
+      {sponsorData?.sponsor && (
+        <div className="mt-6">
+          <SponsorBanner sponsor={sponsorData.sponsor} validUntil={sponsorData.valid_until} />
+        </div>
+      )}
 
       {sponsorData && sponsorData.top3.length > 0 && (
         <div className="mt-6">
@@ -258,7 +303,7 @@ export default function Home() {
       </div>
 
       <div id="leaderboard" className="mt-3 scroll-mt-6">
-        <CategoryFilter active={category} onChange={setCategory} counts={catCounts} totalCount={total} />
+        <CategoryFilter active={category} onChange={handleCategoryChange} counts={catCounts} totalCount={total} />
       </div>
 
       <div className="mt-4 flex scroll-mt-6 flex-col gap-4">
@@ -288,6 +333,11 @@ export default function Home() {
                     listing={listing}
                     rank={rank}
                     claimAmount={claimAmount}
+                    source={
+                      category && category !== "All"
+                        ? `category_${category.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`
+                        : board
+                    }
                     onHover={(hovering) => {
                       if (hovering) {
                         setHoveredTarget(targetInfo);
@@ -358,11 +408,19 @@ export default function Home() {
             {catStats.map((s) => (
               <button
                 key={s.category}
-                onClick={() => setCategory(s.category)}
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => {
+                  handleCategoryChange(s.category);
+                  document.getElementById("leaderboard")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="group flex items-center justify-between px-3 py-2.5 rounded-xl bg-card border border-border hover:border-primary/50 hover:shadow-xs transition-all cursor-pointer text-left"
               >
-                <span className="text-xs text-muted-foreground">{s.category}</span>
-                <span className="text-xs font-mono font-medium tabular-nums">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <CategoryIcon category={s.category} className="size-3.5" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground truncate">{s.category}</span>
+                </div>
+                <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground tabular-nums shrink-0 ml-2">
                   {s.count} · ${s.totalBid.toLocaleString()}
                 </span>
               </button>

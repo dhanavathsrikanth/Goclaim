@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Logo from "./Logo";
 
 function ThemeToggle() {
   const [dark, setDark] = useState(false);
@@ -47,14 +48,10 @@ export default function Header() {
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 font-medium tracking-[-0.04em] shrink-0 text-[22px]"
+            className="inline-flex items-center gap-2 font-semibold tracking-[-0.04em] shrink-0 text-[22px] group"
           >
-            <svg viewBox="0 0 36 28" className="h-[1em] w-auto" aria-hidden="true">
-              <rect x="22" y="0" width="14" height="6" rx="3" className="fill-primary" />
-              <rect x="12" y="11" width="24" height="6" rx="3" className="fill-foreground" />
-              <rect x="0" y="22" width="36" height="6" rx="3" className="fill-foreground" />
-            </svg>
-            <span className="sr-only md:not-sr-only">
+            <Logo className="size-6 transition-transform group-hover:scale-105" />
+            <span className="sr-only md:not-sr-only font-bold tracking-tight">
               goclaim<span className="text-primary">.</span>space
             </span>
           </Link>

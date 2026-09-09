@@ -11,7 +11,7 @@ export default function LogoWall({ entries }: { entries: SponsorEntry[] }) {
         {entries.map((e) => (
           <a
             key={e.listing_id}
-            href={`/api/go/${e.listing_id}`}
+            href={`/api/go/${e.listing_id}?from=logowall`}
             target="_blank"
             rel="sponsored noopener noreferrer"
             title={`${e.product_name} — $${e.total_bid.toLocaleString()}`}

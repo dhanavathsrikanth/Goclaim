@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { normalizeUrl, slugify } from "@/lib/normalize";
+import { normalizeUrl, slugify, extractXHandle } from "@/lib/normalize";
 import { validateBid } from "@/lib/validation";
 import { getListingByNormalizedUrl, getListingBySlug, upsertListing, upsertPayment, getListings } from "@/lib/data";
 import { getCurrentTopBid } from "@/lib/ranking";
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
 
     const normalizedUrl = normalizeUrl(url);
     const existingListing = await getListingByNormalizedUrl(normalizedUrl);
+    const xHandle = extractXHandle(url) || extractXHandle(normalizedUrl);
 
     let listingId: string;
     let productName = "";
@@ -76,19 +77,19 @@ export async function POST(req: NextRequest) {
       faviconUrl = existingListing.favicon_url;
     } else {
       listingId = generateId();
-      try {
-        const parsed = new URL(
-          normalizedUrl.startsWith("http") ? normalizedUrl : `https://${normalizedUrl}`
-        );
-        if (parsed.hostname === "x.com" || parsed.hostname === "twitter.com") {
-          const handle = parsed.pathname.replace(/^\/+/, "").replace(/\/+$/, "");
-          productName = handle ? `@${handle}` : parsed.hostname;
-        } else {
+      if (xHandle) {
+        productName = `@${xHandle}`;
+        faviconUrl = "https://www.google.com/s2/favicons?domain=x.com&sz=64";
+      } else {
+        try {
+          const parsed = new URL(
+            normalizedUrl.startsWith("http") ? normalizedUrl : `https://${normalizedUrl}`
+          );
           productName = parsed.hostname.replace("www.", "");
+          faviconUrl = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
+        } catch {
+          productName = normalizedUrl;
         }
-        faviconUrl = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
-      } catch {
-        productName = normalizedUrl;
       }
     }
 
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
     if (!existingListing) {
       const newListing = {
         id: listingId,
-        url: url.trim().startsWith("@") ? `https://x.com/${url.trim().slice(1).trim()}` : url.trim(),
+        url: xHandle ? `https://x.com/${xHandle}` : (url.trim().startsWith("@") ? `https://x.com/${url.trim().slice(1).trim()}` : url.trim()),
         normalized_url: normalizedUrl,
         product_name: productName,
         description,

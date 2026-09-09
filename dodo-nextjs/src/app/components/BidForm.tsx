@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CATEGORIES, Listing } from "@/lib/types";
 import { isValidUrlOrDomain, extractFaviconDomain } from "@/lib/normalize";
 import ConfirmRankModal from "./ConfirmRankModal";
+import CategoryIcon from "./CategoryIcon";
 
 type TargetInfo = {
   rank: number;
@@ -208,18 +209,28 @@ export default function BidForm({
           <label htmlFor="bid-category" className="sr-only">
             Choose a category
           </label>
-          <select
-            id="bid-category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="h-11 w-full cursor-pointer rounded-xl border border-input bg-white px-3 text-[13px] text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:w-48 dark:bg-card"
-          >
-            {CATEGORIES.filter((c) => c !== "All").map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <div className="relative w-full md:w-56">
+            <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-primary">
+              <CategoryIcon category={category} className="size-4 shrink-0" />
+            </div>
+            <select
+              id="bid-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="h-11 w-full cursor-pointer rounded-xl border border-input bg-white pl-9 pr-8 text-[13px] text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card appearance-none font-medium truncate"
+            >
+              {CATEGORIES.filter((c) => c !== "All").map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+          </div>
           <button
             type="submit"
             disabled={loading}

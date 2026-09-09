@@ -22,6 +22,15 @@ export const metadata: Metadata = {
   title: "goclaim.space — Claim a rank on the public leaderboard",
   description:
     "No third-party ads, no API keys, no revenue sharing. Claim a rank on the public leaderboard and take #1.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 function ThemeScript() {
@@ -43,6 +52,13 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#fffdfa" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#2c2a26" media="(prefers-color-scheme: dark)" />
+        {/* Privacy-friendly analytics by Plausible */}
+        <script async src="https://plausible.io/js/pa-izb-P8HiYs4tFLVQTWViV.js" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init();`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
         <ThemeScript />

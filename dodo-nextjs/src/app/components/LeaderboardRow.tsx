@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { Listing } from "@/lib/types";
 import { extractDisplayUrl } from "@/lib/normalize";
 import FaviconImg from "./FaviconImg";
+import CategoryIcon from "./CategoryIcon";
 
 type Props = {
   listing: Listing;
   rank: number;
   claimAmount: number;
+  source?: string;
   onHover?: (hovering: boolean) => void;
   onSelectRank?: () => void;
 };
@@ -34,7 +36,14 @@ const FAVICON_SIZE: Record<number, string> = {
   2: "size-12 md:size-16",
 };
 
-export default function LeaderboardRow({ listing, rank, claimAmount, onHover, onSelectRank }: Props) {
+export default function LeaderboardRow({
+  listing,
+  rank,
+  claimAmount,
+  source = "all-time",
+  onHover,
+  onSelectRank,
+}: Props) {
   const displayUrl = extractDisplayUrl(listing.normalized_url);
   const isX =
     listing.normalized_url.includes("x.com") || listing.normalized_url.includes("twitter.com");
@@ -42,6 +51,7 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
   const tint = TINT[rank];
   const favSize = FAVICON_SIZE[rank] ?? "size-10 md:size-14";
   const spotClaimPrice = rank === 1 ? claimAmount : Math.max(2, listing.total_bid + 1);
+  const outboundUrl = `/api/go/${listing.id}?from=${encodeURIComponent(source || "all-time")}`;
 
   const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -49,7 +59,7 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
     if (target.closest("a") || target.closest("button")) {
       return;
     }
-    window.open(`/api/go/${listing.id}`, "_blank", "noopener,noreferrer");
+    window.open(outboundUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -57,7 +67,7 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
       onClick={handleRowClick}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
-          window.open(`/api/go/${listing.id}`, "_blank", "noopener,noreferrer");
+          window.open(outboundUrl, "_blank", "noopener,noreferrer");
         }
       }}
       tabIndex={0}
@@ -75,7 +85,7 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
         </span>
 
         <a
-          href={`/api/go/${listing.id}`}
+          href={outboundUrl}
           target="_blank"
           rel="sponsored noopener noreferrer"
           className={`shrink-0 overflow-hidden rounded-lg bg-muted ${favSize} flex items-center justify-center transition-transform group-hover:scale-105`}
@@ -86,16 +96,16 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-lg font-bold text-muted-foreground">
-              {listing.product_name?.charAt(0) || "?"}
-            </span>
+            <div className="flex h-full w-full items-center justify-center bg-muted/60 text-muted-foreground group-hover:text-primary transition-colors">
+              <CategoryIcon category={listing.category || "Other"} className="size-5" />
+            </div>
           )}
         </a>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <a
-              href={`/api/go/${listing.id}`}
+              href={outboundUrl}
               target="_blank"
               rel="sponsored noopener noreferrer"
               className="truncate text-sm md:text-base font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5"
@@ -110,13 +120,24 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
           {listing.description && (
             <p className="truncate text-xs md:text-sm text-muted-foreground mt-0.5">{listing.description}</p>
           )}
+          {listing.founder_note && (
+            <div className="mt-1 flex items-center">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] md:text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 max-w-full truncate shadow-2xs">
+                <span className="size-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="truncate">{listing.founder_note}</span>
+              </span>
+            </div>
+          )}
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] md:text-xs text-muted-foreground">
-            <span>{listing.category || "Other"}</span>
+            <span className="inline-flex items-center gap-1 font-medium">
+              <CategoryIcon category={listing.category || "Other"} className="size-3 shrink-0 opacity-75" />
+              <span>{listing.category || "Other"}</span>
+            </span>
             <span>·</span>
             <span>{timeAgo(listing.updated_at || listing.created_at)}</span>
             <span>·</span>
             <a
-              href={`/api/go/${listing.id}`}
+              href={outboundUrl}
               target="_blank"
               rel="sponsored noopener noreferrer"
               className="truncate max-w-36 hover:text-foreground hover:underline"
@@ -125,6 +146,15 @@ export default function LeaderboardRow({ listing, rank, claimAmount, onHover, on
             </a>
             <span>·</span>
             <span className="tabular-nums font-medium">{listing.click_count.toLocaleString()} clicks</span>
+            {listing.promo_code && (
+              <>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                  <span>🏷️</span>
+                  <span>{listing.promo_code}</span>
+                </span>
+              </>
+            )}
             <span>·</span>
             <Link
               href={`/listings/${slug}`}

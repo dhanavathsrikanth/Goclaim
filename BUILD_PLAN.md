@@ -253,8 +253,10 @@ Also pending: confirm Dodo's `/checkout/create` accepts inline `product_price` (
 
 ---
 
-## PHASE 13 — Launch
-- [ ] **13.1 Deploy** (render Next.js app; Neon already deployed)
+## PHASE 13 — Launch  ⬅️ **DEPLOYED to workers.dev** → see `CLOUDFLARE_DEPLOY.md`
+- [x] **13.0 Cloudflare prep (code)** — adapter + wrangler + OG fallback + CI workflow done.
+- [x] **13.1 Deploy** — LIVE 2026-09-09 at https://goclaim-space.22211a0112.workers.dev (11 secrets pushed, all routes verified). Left: custom domain (no zone yet — user), Dodo URL updates, QStash schedule.
+- [ ] **13.2 Launch tweet**
 - [ ] **13.2 Launch tweet**
 - [ ] **13.3 Quote-tweet updates every 2–4h**
 - [ ] **13.4 Real-time monitoring** (payments/errors/traffic)
@@ -287,7 +289,7 @@ Phase 6 Buyer dashboard .... ✅ done → SEE `PHASE_6_COMPLETE.md`
 Phase 7 Listing pages ...... ✅ done → SEE `PHASE_7_COMPLETE.md`
 Phase 8 Hall of Fame ....... ✅ done → SEE `PHASE_8_COMPLETE.md`
 Phase 9 Public pages ........ ✅ done → SEE `PHASE_9_COMPLETE.md`
-Phase 10 Viral ............. ✅ done (10.1 wired, sim mode until X keys)
+Phase 10 Viral ............. ✅ done (10.1 wired, sim mode until X keys; OG now static fallback — see CLOUDFLARE_DEPLOY.md)
 Phase 11 Admin ............. ✅ done → SEE `PHASE_11_COMPLETE.md`
 Phase 12 Polish ............ ✅ code done → SEE `PHASE_12_COMPLETE.md` (12.3 keys, 12.4 DNS, 12.7 legal on you)
 Phase 13 Launch ............ ⬅️ NEXT  (deploy + launch-day ops)

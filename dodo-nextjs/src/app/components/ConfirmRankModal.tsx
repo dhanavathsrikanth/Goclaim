@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import CategoryIcon from "./CategoryIcon";
 
 type Props = {
   isOpen: boolean;
@@ -92,9 +93,12 @@ export default function ConfirmRankModal({
             <span className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight block mt-0.5">
               #{rank}
             </span>
-            <span className="text-xs text-muted-foreground mt-1 block truncate">
-              {category || "Other"}
-            </span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <CategoryIcon category={category || "Other"} className="size-3.5 text-primary shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground truncate">
+                {category || "Other"}
+              </span>
+            </div>
           </div>
 
           <div className="text-right shrink-0">

@@ -16,6 +16,10 @@ export type Listing = {
   logo_url: string;
   slug: string;
   creative_approved: boolean;
+  promo_code?: string;
+  promo_offer?: string;
+  demo_url?: string;
+  founder_note?: string;
 };
 
 export type Payment = {
@@ -94,3 +98,29 @@ export type ActivityItem = {
   slug: string;
   amount: number;
 };
+
+export type DayClickCount = {
+  day: string;
+  clicks: number;
+};
+
+export type ReferralSourceBreakdown = {
+  source: string;
+  label: string;
+  count: number;
+  percentage: number;
+  icon?: string;
+  color?: string;
+};
+
+export type RoiMetrics = {
+  total_bid: number;
+  total_clicks: number;
+  effective_cpc: number;
+  benchmark_cpc: number;
+  savings_pct: number;
+  estimated_market_value: number;
+  roi_multiple: number;
+  callout_text: string;
+};
+

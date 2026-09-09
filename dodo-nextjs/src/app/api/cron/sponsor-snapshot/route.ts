@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
 import { snapshotSponsors, getActiveSponsor, getListingById } from "@/lib/data";
 import { announceDailyChampion } from "@/lib/composio";
+import { triggerDailyDigestBroadcast } from "@/lib/socialBot";
 
 function getReceiver(): Receiver | null {
   const current = process.env.QSTASH_CURRENT_SIGNING_KEY;
@@ -48,6 +49,7 @@ async function handler(req: NextRequest) {
   const result = await snapshotSponsors();
 
   let social = null;
+  let digest = null;
   try {
     const active = await getActiveSponsor();
     if (active && active.entries.length > 0) {
@@ -64,7 +66,13 @@ async function handler(req: NextRequest) {
     console.error("Failed to announce daily champion to social:", err);
   }
 
-  return NextResponse.json({ ok: true, ...result, social });
+  try {
+    digest = await triggerDailyDigestBroadcast();
+  } catch (err) {
+    console.error("Failed to trigger daily digest to social:", err);
+  }
+
+  return NextResponse.json({ ok: true, ...result, social, digest });
 }
 
 export async function GET(req: NextRequest) {

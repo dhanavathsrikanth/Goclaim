@@ -5,6 +5,7 @@ import { getComposioStatus } from "@/lib/composio";
 import AdminSidebar from "./components/AdminSidebar";
 import ComposioCard from "./components/ComposioCard";
 import { ListingRowActions, CreativeActions, SnapshotTrigger } from "./components/AdminActions";
+import CategoryIcon from "../components/CategoryIcon";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -153,8 +154,8 @@ export default async function AdminDashboardPage() {
                 {topAllTime ? (
                   <a href={`/listings/${topAllTime.slug || topAllTime.id}`} target="_blank">
                     <img
-                      src={`/api/og/rank/${topAllTime.slug || topAllTime.id}`}
-                      alt="Rank share card preview"
+                      src="/og-fallback.png"
+                      alt="Share card preview"
                       className="mt-3 w-full rounded-xl border border-[#33322E]"
                     />
                   </a>
@@ -162,7 +163,7 @@ export default async function AdminDashboardPage() {
                   <p className="text-xs text-[#9E9C96] mt-3">No listings yet.</p>
                 )}
                 <p className="text-[11px] text-[#9E9C96] mt-2">
-                  Generated per listing at /api/og/rank/[id] — attached to listing pages as og:image.
+                  Static share card (public/og-fallback.png) — attached to listing pages as og:image.
                 </p>
               </div>
 
@@ -350,11 +351,13 @@ export default async function AdminDashboardPage() {
               </div>
               <div className="bg-[#1E1D1B] border border-[#33322E] rounded-2xl p-5 shadow-sm">
                 <p className="text-xs font-medium text-[#9E9C96] uppercase tracking-wider">Top categories</p>
-                <div className="mt-1.5 space-y-1">
+                <div className="mt-2 space-y-1.5">
                   {catStats.slice(0, 3).map((c) => (
-                    <p key={c.category} className="text-xs text-white">
-                      {c.category} <span className="text-[#9E9C96]">· {c.count} · ${c.totalBid.toLocaleString()}</span>
-                    </p>
+                    <div key={c.category} className="flex items-center gap-1.5 text-xs text-white">
+                      <CategoryIcon category={c.category} className="size-3.5 text-[#D97757] shrink-0" />
+                      <span className="truncate">{c.category}</span>
+                      <span className="text-[#9E9C96] shrink-0 ml-auto">· {c.count} · ${c.totalBid.toLocaleString()}</span>
+                    </div>
                   ))}
                   {catStats.length === 0 && (
                     <p className="text-xs text-[#9E9C96]">No data yet.</p>
@@ -410,13 +413,20 @@ export default async function AdminDashboardPage() {
                         <tr key={l.id} className="hover:bg-[#242320]/60 transition-colors">
                           <td className="px-6 py-3.5 font-medium text-white">
                             <div className="flex items-center gap-2.5">
-                              {l.favicon_url && (
-                                <img src={l.favicon_url} alt="" className="w-4 h-4 rounded object-cover" />
+                              {l.favicon_url ? (
+                                <img src={l.favicon_url} alt="" className="w-4 h-4 rounded object-cover shrink-0" />
+                              ) : (
+                                <CategoryIcon category={l.category} className="w-4 h-4 text-[#D97757] shrink-0" />
                               )}
                               <span className="truncate max-w-[180px]">{l.product_name || l.normalized_url}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-3.5 text-[#9E9C96]">{l.category}</td>
+                          <td className="px-6 py-3.5 text-[#9E9C96]">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CategoryIcon category={l.category} className="w-3.5 h-3.5 text-[#D97757] shrink-0" />
+                              <span>{l.category}</span>
+                            </span>
+                          </td>
                           <td className="px-6 py-3.5 font-bold text-[#D97757]">${l.total_bid}</td>
                           <td className="px-6 py-3.5">{l.click_count}</td>
                           <td className="px-6 py-3.5">

@@ -35,14 +35,9 @@ export default function Footer() {
           Activity
         </Link>
         <span>·</span>
-        <a
-          href="https://outbid.lol"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-primary hover:text-primary/80"
-        >
-          Inspired by outbid.lol
-        </a>
+        <span className="text-muted-foreground font-normal">
+          © {new Date().getFullYear()} goclaim.space
+        </span>
       </nav>
     </footer>
   );

@@ -1,8 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import type { Listing } from "@/lib/types";
 import { extractDisplayUrl } from "@/lib/normalize";
 import RelatedListings from "../components/RelatedListings";
 import ShareButtons from "../components/ShareButtons";
 import FaviconImg from "../components/FaviconImg";
+import CategoryIcon from "../components/CategoryIcon";
+import EmbedBadgeModal from "../components/EmbedBadgeModal";
+import PromoCodeBox from "../components/PromoCodeBox";
+import DemoEmbed from "../components/DemoEmbed";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -14,6 +21,7 @@ type Props = {
 };
 
 export default function ListingDetail({ listing, rank, related }: Props) {
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
   const displayUrl = extractDisplayUrl(listing.normalized_url);
 
   return (
@@ -27,8 +35,8 @@ export default function ListingDetail({ listing, rank, related }: Props) {
                 className="w-12 h-12 rounded-lg"
               />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground border border-border/50">
-                {listing.product_name?.charAt(0) || "?"}
+              <div className="w-14 h-14 rounded-xl bg-muted/80 flex items-center justify-center text-primary border border-border/50">
+                <CategoryIcon category={listing.category} className="size-7" />
               </div>
             )}
             <div className="min-w-0">
@@ -39,9 +47,23 @@ export default function ListingDetail({ listing, rank, related }: Props) {
             </div>
           </div>
 
+          {listing.founder_note && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary/10 border border-primary/25 text-primary text-xs font-semibold mb-6 shadow-xs max-w-full">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span className="truncate">{listing.founder_note}</span>
+            </div>
+          )}
+
           {listing.description && (
             <p className="text-foreground/80 text-sm mb-6 leading-relaxed">{listing.description}</p>
           )}
+
+          {listing.demo_url && listing.demo_url.trim() && !listing.demo_url.includes("oFfGs3rC7X8") ? (
+            <DemoEmbed demoUrl={listing.demo_url.trim()} productName={listing.product_name || displayUrl} />
+          ) : null}
 
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
             <div className="bg-muted/30 border border-border/60 rounded-xl p-3 sm:p-4 text-center min-w-0">
@@ -63,19 +85,46 @@ export default function ListingDetail({ listing, rank, related }: Props) {
           </div>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-6 px-1">
-            <span>Category: <strong className="text-foreground font-medium">{listing.category}</strong></span>
+            <div className="flex items-center gap-1.5">
+              <span>Category:</span>
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <CategoryIcon category={listing.category} className="size-3.5 text-primary shrink-0" />
+                {listing.category}
+              </span>
+            </div>
             <span>
               Listed: {new Date(listing.created_at).toLocaleDateString()}
             </span>
           </div>
 
-          <a
-            href={`/api/go/${listing.id}`}
-            rel="sponsored"
-            className="block w-full py-3 px-4 rounded-lg bg-white text-black font-medium text-center hover:bg-neutral-200 transition-colors"
-          >
-            Visit
-          </a>
+          {listing.promo_code && (
+            <PromoCodeBox
+              promoCode={listing.promo_code}
+              promoOffer={listing.promo_offer}
+              productName={listing.product_name || displayUrl}
+            />
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
+            <a
+              href={`/api/go/${listing.id}?from=listing_page`}
+              target="_blank"
+              rel="sponsored noopener noreferrer"
+              className="flex-1 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-center hover:bg-primary/90 transition-all shadow-xs"
+            >
+              {listing.normalized_url.includes("x.com") || listing.normalized_url.includes("twitter.com")
+                ? "Visit Profile on 𝕏 ↗"
+                : "Visit Website ↗"}
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsBadgeModalOpen(true)}
+              className="flex-1 py-3 px-4 rounded-xl bg-muted/50 hover:bg-muted border border-border text-foreground font-semibold text-center transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>🏆</span>
+              <span>Embed Badge</span>
+            </button>
+          </div>
 
           <ShareButtons
             pageUrl={`${SITE_URL}/listings/${listing.slug || listing.id}`}
@@ -83,6 +132,15 @@ export default function ListingDetail({ listing, rank, related }: Props) {
             bid={listing.total_bid}
           />
         </div>
+
+        <EmbedBadgeModal
+          isOpen={isBadgeModalOpen}
+          onClose={() => setIsBadgeModalOpen(false)}
+          slug={listing.slug || listing.id}
+          productName={listing.product_name || displayUrl}
+          category={listing.category}
+          rank={rank}
+        />
 
         <RelatedListings items={related} category={listing.category} />
       </div>

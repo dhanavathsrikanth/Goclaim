@@ -51,7 +51,10 @@ export async function generateMetadata({
   const title = listingTitle(listing);
   const description = listingDescription(listing);
   const url = `${SITE_URL}/listings/${listing.slug || listing.id}`;
-  const card = `${SITE_URL}/api/og/rank/${listing.slug || listing.id}`;
+  // Static share card (public/og-fallback.png). Per-listing dynamic PNGs are
+  // parked until a Workers-safe renderer works under the OpenNext bundle
+  // (cf-workers-og hits an fs.readFile wall at request time on workerd).
+  const card = `${SITE_URL}/og-fallback.png`;
   const creative =
     listing.banner_url || listing.logo_url || listing.favicon_url || undefined;
   const images = [{ url: card }, ...(creative ? [{ url: creative }] : [])];

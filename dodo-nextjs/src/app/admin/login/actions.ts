@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth/server";
+import { auth, checkIsAdminInDb } from "@/lib/auth/server";
 import { redirect } from "next/navigation";
 
 export async function signInAdmin(
@@ -14,9 +14,10 @@ export async function signInAdmin(
     return { error: "Email and password are required." };
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (adminEmail && email !== adminEmail) {
-    return { error: "Access denied. Only registered admin email is allowed." };
+  // Cross check database table for admin role
+  const isAdmin = await checkIsAdminInDb(email);
+  if (!isAdmin) {
+    return { error: `Access denied. The account (${email}) does not have an admin role in the database.` };
   }
 
   const { error } = await auth.signIn.email({
@@ -43,9 +44,10 @@ export async function signUpAdmin(
     return { error: "Email and password are required." };
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (adminEmail && email !== adminEmail) {
-    return { error: `Sign up is restricted to the admin email: ${adminEmail}` };
+  // Cross check database table for admin role before allowing signup
+  const isAdmin = await checkIsAdminInDb(email);
+  if (!isAdmin) {
+    return { error: `Sign up restricted. The email (${email}) must be added to the database with admin role first.` };
   }
 
   const { error } = await auth.signUp.email({
@@ -60,3 +62,4 @@ export async function signUpAdmin(
 
   redirect("/admin");
 }
+

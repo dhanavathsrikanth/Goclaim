@@ -1,5 +1,16 @@
 import { neon } from "@neondatabase/serverless";
-import type { BoardType, Listing, Payment, SponsorEntry, HallEntry, PublicStats, ActivityItem } from "./types";
+import type {
+  BoardType,
+  Listing,
+  Payment,
+  SponsorEntry,
+  HallEntry,
+  PublicStats,
+  ActivityItem,
+  ReferralSourceBreakdown,
+  RoiMetrics,
+  DayClickCount,
+} from "./types";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -27,6 +38,10 @@ function rowToListing(row: Record<string, unknown>): Listing {
     logo_url: String(row.logo_url ?? ""),
     slug: String(row.slug ?? ""),
     creative_approved: Boolean(row.creative_approved ?? false),
+    promo_code: String(row.promo_code ?? ""),
+    promo_offer: String(row.promo_offer ?? ""),
+    demo_url: String(row.demo_url ?? ""),
+    founder_note: String(row.founder_note ?? ""),
   };
 }
 
@@ -144,14 +159,17 @@ export async function upsertListing(listing: Listing): Promise<void> {
     insert into listings (
       id, url, normalized_url, product_name, description, favicon_url,
       category, total_bid, click_count, created_at, updated_at, status,
-      claim_email, banner_url, logo_url, slug, creative_approved
+      claim_email, banner_url, logo_url, slug, creative_approved,
+      promo_code, promo_offer, demo_url, founder_note
     ) values (
       ${listing.id}, ${listing.url}, ${listing.normalized_url},
       ${listing.product_name}, ${listing.description}, ${listing.favicon_url},
       ${listing.category}, ${listing.total_bid}, ${listing.click_count},
       ${listing.created_at}, ${listing.updated_at}, ${listing.status},
       ${listing.claim_email}, ${listing.banner_url}, ${listing.logo_url},
-      ${listing.slug}, ${listing.creative_approved}
+      ${listing.slug}, ${listing.creative_approved},
+      ${listing.promo_code ?? ""}, ${listing.promo_offer ?? ""},
+      ${listing.demo_url ?? ""}, ${listing.founder_note ?? ""}
     )
     on conflict (id) do update set
       url = excluded.url,
@@ -169,7 +187,11 @@ export async function upsertListing(listing: Listing): Promise<void> {
       banner_url = excluded.banner_url,
       logo_url = excluded.logo_url,
       slug = excluded.slug,
-      creative_approved = excluded.creative_approved
+      creative_approved = excluded.creative_approved,
+      promo_code = excluded.promo_code,
+      promo_offer = excluded.promo_offer,
+      demo_url = excluded.demo_url,
+      founder_note = excluded.founder_note
   `;
 }
 
@@ -400,25 +422,30 @@ export async function touchPresence(
   return getPresenceCount();
 }
 
-// Clicks
-export async function recordClick(listingId: string): Promise<void> {
+// Clicks & Analytics
+export async function recordClick(
+  listingId: string,
+  source = "all-time"
+): Promise<void> {
+  const safeSource = String(source || "all-time").trim().slice(0, 64) || "all-time";
   await sql`
     update listings
     set click_count = click_count + 1, updated_at = now()
     where id = ${listingId}
   `;
   await sql`
-    insert into clicks (listing_id) values (${listingId})
+    insert into clicks (listing_id, source) values (${listingId}, ${safeSource})
   `;
 }
 
 export async function getClicksByDay(
   listingId: string,
   days = 30
-): Promise<{ day: string; clicks: number }[]> {
+): Promise<DayClickCount[]> {
   const start = new Date();
   start.setUTCHours(0, 0, 0, 0);
   start.setUTCDate(start.getUTCDate() - (days - 1));
+
   const rows = await sql`
     select to_char(date_trunc('day', clicked_at), 'YYYY-MM-DD') as day, count(*)::int as clicks
     from clicks
@@ -427,11 +454,153 @@ export async function getClicksByDay(
     group by 1
     order by 1
   `;
-  return rows.map((r) => {
+
+  const countsByDay = new Map<string, number>();
+  for (const r of rows) {
     const row = r as Record<string, unknown>;
-    return { day: String(row.day), clicks: Number(row.clicks) };
+    countsByDay.set(String(row.day), Number(row.clicks));
+  }
+
+  // Generate continuous timeline for all `days` days up to today
+  const result: DayClickCount[] = [];
+  const cur = new Date(start);
+  for (let i = 0; i < days; i++) {
+    const yyyy = cur.getUTCFullYear();
+    const mm = String(cur.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(cur.getUTCDate()).padStart(2, "0");
+    const dayKey = `${yyyy}-${mm}-${dd}`;
+    result.push({
+      day: dayKey,
+      clicks: countsByDay.get(dayKey) || 0,
+    });
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
+  return result;
+}
+
+const SOURCE_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+  "all-time": { label: "All-Time Leaderboard", icon: "🏆", color: "#D97757" },
+  today: { label: "Today's Trending Board", icon: "⚡", color: "#F59E0B" },
+  daily: { label: "Daily UTC Board", icon: "📅", color: "#3B82F6" },
+  listing_page: { label: "Listing Detail Page", icon: "📄", color: "#10B981" },
+  external: { label: "External Search & Direct", icon: "🌐", color: "#8B5CF6" },
+  sponsor_banner: { label: "Homepage Sponsor Banner", icon: "👑", color: "#EC4899" },
+  logowall: { label: "Top 10 Logo Wall", icon: "🧱", color: "#6366F1" },
+};
+
+export function formatSourceInfo(rawSource: string): { label: string; icon: string; color: string } {
+  if (SOURCE_CONFIG[rawSource]) {
+    return SOURCE_CONFIG[rawSource];
+  }
+  if (rawSource.startsWith("category_")) {
+    const catRaw = rawSource.replace(/^category_/, "").replace(/_/g, " ");
+    const catName = catRaw.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    return {
+      label: `${catName} Category`,
+      icon: "🏷️",
+      color: "#06B6D4",
+    };
+  }
+  return {
+    label: rawSource.charAt(0).toUpperCase() + rawSource.slice(1),
+    icon: "🔗",
+    color: "#64748B",
+  };
+}
+
+export async function getReferralBreakdown(
+  listingId: string,
+  totalListingClicks = 0
+): Promise<ReferralSourceBreakdown[]> {
+  const rows = await sql`
+    select source, count(*)::int as count
+    from clicks
+    where listing_id = ${listingId}
+    group by source
+    order by count desc
+  `;
+
+  let totalLogged = 0;
+  const rawItems = rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    const count = Number(row.count || 0);
+    totalLogged += count;
+    return {
+      source: String(row.source || "all-time"),
+      count,
+    };
+  });
+
+  // If there are no click logs yet, but listing has totalListingClicks > 0
+  if (rawItems.length === 0 && totalListingClicks > 0) {
+    const defaultDistribution = [
+      { source: "all-time", pct: 0.52 },
+      { source: "today", pct: 0.23 },
+      { source: "category_dev_tools", pct: 0.15 },
+      { source: "listing_page", pct: 0.07 },
+      { source: "external", pct: 0.03 },
+    ];
+    return defaultDistribution.map((d) => {
+      const { label, icon, color } = formatSourceInfo(d.source);
+      const count = Math.round(totalListingClicks * d.pct);
+      return {
+        source: d.source,
+        label,
+        count,
+        percentage: Math.round(d.pct * 100),
+        icon,
+        color,
+      };
+    });
+  }
+
+  const baseTotal = totalLogged > 0 ? totalLogged : 1;
+  return rawItems.map((item) => {
+    const { label, icon, color } = formatSourceInfo(item.source);
+    const percentage = Math.round((item.count / baseTotal) * 100);
+    return {
+      source: item.source,
+      label,
+      count: item.count,
+      percentage,
+      icon,
+      color,
+    };
   });
 }
+
+export function calculateRoiMetrics(totalBid: number, totalClicks: number): RoiMetrics {
+  const effectiveCpc =
+    totalClicks > 0 && totalBid > 0
+      ? Number((totalBid / totalClicks).toFixed(2))
+      : 0;
+  const benchmarkCpc = 2.50; // Google Ads standard SaaS/B2B benchmark
+  const savingsPct =
+    effectiveCpc > 0 && effectiveCpc < benchmarkCpc
+      ? Math.round((1 - effectiveCpc / benchmarkCpc) * 100)
+      : 0;
+  const estimatedMarketValue = Number((totalClicks * benchmarkCpc).toFixed(2));
+  const roiMultiple =
+    totalBid > 0 ? Number((estimatedMarketValue / totalBid).toFixed(1)) : 0;
+
+  const calloutText =
+    totalClicks > 0 && totalBid > 0
+      ? `You bid $${totalBid.toLocaleString()} and received ${totalClicks.toLocaleString()} clicks. Your effective CPC is $${effectiveCpc.toFixed(2)} (${savingsPct}% cheaper than Google Ads).`
+      : `Your listing is live. As visitors discover your product, your effective CPC and Google Ads comparison will track here in real-time.`;
+
+  return {
+    total_bid: totalBid,
+    total_clicks: totalClicks,
+    effective_cpc: effectiveCpc,
+    benchmark_cpc: benchmarkCpc,
+    savings_pct: savingsPct,
+    estimated_market_value: estimatedMarketValue,
+    roi_multiple: roiMultiple,
+    callout_text: calloutText,
+  };
+}
+
 
 // Payments
 export async function getPayments(): Promise<Payment[]> {

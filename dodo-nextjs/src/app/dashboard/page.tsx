@@ -1,14 +1,23 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import type { Listing, Payment } from "@/lib/types";
-
-type DayCount = { day: string; clicks: number };
+import type {
+  Listing,
+  Payment,
+  DayClickCount,
+  ReferralSourceBreakdown,
+  RoiMetrics,
+} from "@/lib/types";
+import RoiCalculatorCard from "../components/RoiCalculatorCard";
+import ClickTimelineChart from "../components/ClickTimelineChart";
+import ReferralBreakdownCard from "../components/ReferralBreakdownCard";
 
 type DashboardItem = {
   listing: Listing;
   ranks: Record<string, number | null>;
-  clicks_by_day: DayCount[];
+  clicks_by_day: DayClickCount[];
+  referral_breakdown: ReferralSourceBreakdown[];
+  roi?: RoiMetrics;
   payments: Payment[];
   ad_live: boolean;
   ad_valid_until: string;
@@ -19,37 +28,6 @@ const BOARD_LABELS: Record<string, string> = {
   today: "Today",
   daily: "Daily",
 };
-
-function ClickChart({ data }: { data: DayCount[] }) {
-  const max = Math.max(1, ...data.map((d) => d.clicks));
-  const last14 = data.slice(-14);
-  return (
-    <div>
-      <div className="flex items-end gap-1 h-20">
-        {last14.length === 0 ? (
-          <p className="text-xs text-muted-foreground self-center">No clicks yet.</p>
-        ) : (
-          last14.map((d) => (
-            <div
-              key={d.day}
-              title={`${d.day}: ${d.clicks} clicks`}
-              className="flex-1 rounded-t bg-primary/60 hover:bg-primary transition-colors min-w-2"
-              style={{ height: `${Math.max(4, (d.clicks / max) * 100)}%` }}
-            />
-          ))
-        )}
-      </div>
-      {last14.length > 0 && (
-        <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-muted-foreground">{last14[0].day.slice(5)}</span>
-          <span className="text-[10px] text-muted-foreground">
-            {last14[last14.length - 1].day.slice(5)}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function CreativeForm({
   listing,
@@ -62,6 +40,10 @@ function CreativeForm({
 }) {
   const [banner, setBanner] = useState(listing.banner_url || "");
   const [logo, setLogo] = useState(listing.logo_url || "");
+  const [demoUrl, setDemoUrl] = useState(listing.demo_url || "");
+  const [promoCode, setPromoCode] = useState(listing.promo_code || "");
+  const [promoOffer, setPromoOffer] = useState(listing.promo_offer || "");
+  const [founderNote, setFounderNote] = useState(listing.founder_note || "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -72,12 +54,20 @@ function CreativeForm({
       const res = await fetch(`/api/listing/${listing.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ claim, banner_url: banner, logo_url: logo }),
+        body: JSON.stringify({
+          claim,
+          banner_url: banner,
+          logo_url: logo,
+          demo_url: demoUrl,
+          promo_code: promoCode,
+          promo_offer: promoOffer,
+          founder_note: founderNote,
+        }),
       });
       if (!res.ok) {
-        setMsg("Couldn't save — check the URLs and try again.");
+        setMsg("Couldn't save — check the inputs and try again.");
       } else {
-        setMsg("Saved.");
+        setMsg("Saved successfully!");
         onSaved();
       }
     } catch {
@@ -88,33 +78,101 @@ function CreativeForm({
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-border">
-      <p className="text-xs font-semibold text-muted-foreground mb-2">
-        Sponsor creatives (shown on the ad slot if you win — after admin approval)
-      </p>
-      <div className="grid sm:grid-cols-2 gap-2">
-        <input
-          value={banner}
-          onChange={(e) => setBanner(e.target.value)}
-          placeholder="Banner image URL (https://…)"
-          className="px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
-        />
-        <input
-          value={logo}
-          onChange={(e) => setLogo(e.target.value)}
-          placeholder="Logo image URL (https://…)"
-          className="px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
-        />
+    <div className="mt-4 pt-4 border-t border-border space-y-4">
+      {/* Rich Profile Enhancements */}
+      <div>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-1">
+          ✨ Founder Conversion Enhancements
+        </h4>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Give visitors more reasons to click, watch your demo, and use your discount codes.
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+              Founder One-Liner / Changelog Note (Viral badge on card &amp; listing)
+            </label>
+            <input
+              value={founderNote}
+              onChange={(e) => setFounderNote(e.target.value)}
+              placeholder="e.g. 🚀 Just launched v2.0 with Claude 3.7 support!"
+              maxLength={120}
+              className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                Custom Promo / Discount Code
+              </label>
+              <input
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                placeholder="e.g. GOCLAIM"
+                maxLength={30}
+                className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                Discount Offer Description
+              </label>
+              <input
+                value={promoOffer}
+                onChange={(e) => setPromoOffer(e.target.value)}
+                placeholder="e.g. Use code GOCLAIM for 20% off"
+                maxLength={100}
+                className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+              Video / Loom / GIF Demo Embed URL
+            </label>
+            <input
+              value={demoUrl}
+              onChange={(e) => setDemoUrl(e.target.value)}
+              placeholder="https://youtube.com/watch?v=... or https://loom.com/share/..."
+              className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+            />
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-3 mt-2">
+
+      {/* Sponsor creatives */}
+      <div className="pt-2 border-t border-border/60">
+        <p className="text-xs font-semibold text-muted-foreground mb-2">
+          Sponsor Creatives (shown on hero ad slot if you win #1)
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <input
+            value={banner}
+            onChange={(e) => setBanner(e.target.value)}
+            placeholder="Banner image URL (https://…)"
+            className="px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+          />
+          <input
+            value={logo}
+            onChange={(e) => setLogo(e.target.value)}
+            placeholder="Logo image URL (https://…)"
+            className="px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mt-3">
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-1.5 rounded-lg bg-muted text-sm text-foreground hover:bg-muted/70 disabled:opacity-50 cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
         >
-          {saving ? "Saving…" : "Save creatives"}
+          {saving ? "Saving…" : "Save Listing Enhancements"}
         </button>
-        {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
+        {msg && <span className="text-xs font-medium text-foreground">{msg}</span>}
       </div>
     </div>
   );
@@ -126,11 +184,8 @@ export default function Dashboard() {
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "invalid">("loading");
 
-  useEffect(() => {
-    setClaim(new URLSearchParams(window.location.search).get("claim") ?? "");
-  }, []);
-
   const load = useCallback(async (token: string) => {
+    setState("loading");
     try {
       const res = await fetch(
         `/api/dashboard?claim=${encodeURIComponent(token)}`
@@ -149,12 +204,14 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!claim) {
+    const token = new URLSearchParams(window.location.search).get("claim") ?? "";
+    setClaim(token);
+    if (!token) {
       setState("invalid");
       return;
     }
-    load(claim);
-  }, [claim, load]);
+    load(token);
+  }, [load]);
 
   if (state === "loading") {
     return (
@@ -286,11 +343,23 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    <div className="mt-4">
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">
-                        Clicks per day (last 14 days with activity window)
-                      </p>
-                      <ClickChart data={item.clicks_by_day} />
+                    {/* Private Analytics & ROI Calculator Section */}
+                    <div className="mt-5 space-y-4">
+                      <RoiCalculatorCard
+                        listingId={l.id}
+                        productName={l.product_name || l.url}
+                        totalBid={l.total_bid}
+                        clickCount={l.click_count}
+                        initialRoi={item.roi}
+                      />
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <ClickTimelineChart data={item.clicks_by_day} />
+                        <ReferralBreakdownCard
+                          breakdown={item.referral_breakdown}
+                          totalClicks={l.click_count}
+                        />
+                      </div>
                     </div>
 
                     <div className="mt-4">
