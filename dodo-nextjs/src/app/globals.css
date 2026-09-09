@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #fffdfa;
+  --foreground: #1c1917;
+  --primary: #e57255;
+  --primary-foreground: #ffffff;
+  --muted: #f4eee7;
+  --muted-foreground: #78716c;
+  --card: #ffffff;
+  --border: #e7e0d6;
+  --input: #e7e0d6;
+  --ring: #e57255;
+  --live: #16a34a;
+}
+
+.dark {
+  --background: #2c2a26;
+  --foreground: #f5f0e8;
+  --primary: #e57255;
+  --primary-foreground: #ffffff;
+  --muted: #3a3630;
+  --muted-foreground: #a8a29e;
+  --card: #35312c;
+  --border: #44403a;
+  --input: #44403a;
+  --ring: #e57255;
+  --live: #4ade80;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-live: var(--live);
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 35%, transparent);
+}
