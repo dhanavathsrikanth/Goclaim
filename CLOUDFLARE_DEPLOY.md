@@ -18,7 +18,17 @@ updates → QStash schedule.
   stays in title/description. Dynamic PNGs = follow-up when the toolchain
   allows. Both OG deps uninstalled.
 - `.github/workflows/deploy.yml` — CI builds + deploys on push to `main`
-  (touches `dodo-nextjs/**`), or manual dispatch.
+  (touches `dodo-nextjs/**`, root `package-lock.json`, `wrangler.jsonc`, or
+  `.github/**`), or manual dispatch.
+- Cloudflare git-build fix (2026-09-10): the CF Workers build (install at the
+  repo root, `bun install` on the workspace) hoists `next` to the root
+  `node_modules`, which Turbopack can't resolve from `dodo-nextjs`
+  (`Error: Could not find the Next.js package`). Fixed with
+  `turbopack.root = …/..` (+ matching `outputFileTracingRoot`) in
+  `next.config.ts`, and the repo is now a standard npm-workspaces monorepo:
+  a single root `package-lock.json` (the per-app `dodo-nextjs/package-lock.json`
+  was removed) so OpenNext detects the monorepo root consistently on local,
+  GH Actions, and CF builds. Install/build/deploy from the repo root.
 - No app-code changes were needed for the runtime: Neon (fetch driver),
   QStash, Dodo, `node:crypto` all work under `nodejs_compat`.
 
@@ -56,10 +66,11 @@ in CI env + local `.env`. `DATABASE_URL_UNPOOLED` is only used by `migrate.cjs`,
 never by the app — do not deploy it.)
 
 ## 3. Deploy — ✅ DONE (opennext build + deploy 2026-09-09, version live at 100%)
-Re-deploy anytime: `cmd /c "node_modules\.bin\opennextjs-cloudflare.cmd deploy"`
-from `dodo-nextjs/` (uses the direct shim — `npx` flakes after process kills).
-CI (`.github/workflows/deploy.yml`) still needs `CLOUDFLARE_API_TOKEN` +
-`CLOUDFLARE_ACCOUNT_ID` repo secrets if you want push-to-deploy.
+From the repo root (workspace monorepo), or from `dodo-nextjs/` for a worker-only
+rebuild. CI (`.github/workflows/deploy.yml`) runs `npm ci` + `npm run build` +
+`npm run deploy` at the repo root and needs `CLOUDFLARE_API_TOKEN` +
+`CLOUDFLARE_ACCOUNT_ID` repo secrets (set via GitHub repo → Settings → Secrets —
+fill them to enable push-to-deploy).
 
 ## 4. Custom domain (closes 12.4) — ⏳ NEEDS YOU
 No `goclaim.space` zone on Cloudflare yet (checked 2026-09-09). Steps:

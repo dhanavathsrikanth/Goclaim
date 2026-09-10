@@ -5,14 +5,14 @@ on:
     branches: [main]
     paths:
       - "dodo-nextjs/**"
+      - "package-lock.json"
+      - "wrangler.jsonc"
+      - ".github/**"
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dodo-nextjs
     steps:
       - uses: actions/checkout@v4
 
@@ -20,9 +20,10 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: dodo-nextjs/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - run: npm ci
+      - name: Install workspace dependencies
+        run: npm ci
 
       - name: Verify Next.js build
         run: npm run build
