@@ -9,7 +9,7 @@ export default function RulesPage() {
             <h2 className="text-lg font-semibold text-foreground mb-3">Rank is what you pay — nothing else.</h2>
             <p>
               goclaim.space is a public leaderboard. There are no third-party ads, no API keys, and no revenue share.
-              The only promotion on the site is the daily #1 winner's own banner — the prize for outbidding everyone else.
+              The only promotion on the site is the daily #1 winner&apos;s own banner — the prize for outbidding everyone else.
               You pay to stand above everyone else. Rank is the bid — nothing else.
             </p>
           </section>

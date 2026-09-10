@@ -1,6 +1,18 @@
 {
+  "name": "goclaim-monorepo",
+  "private": true,
+  "workspaces": [
+    "dodo-nextjs"
+  ],
+  "scripts": {
+    "build": "cd dodo-nextjs && npx opennextjs-cloudflare build",
+    "deploy": "npx wrangler deploy"
+  },
   "dependencies": {
     "@neon/config": "^1.3.1",
     "@neon/env": "^1.2.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.130.0"
   }
 }

@@ -131,7 +131,7 @@ export default async function AdminDashboardPage() {
 
               <div className="bg-[#1E1D1B] border border-[#33322E] rounded-2xl p-5 shadow-sm">
                 <p className="text-xs font-medium text-[#9E9C96] uppercase tracking-wider">
-                  Today's #1 (24h)
+                  Today&apos;s #1 (24h)
                 </p>
                 <p className="text-xl font-bold text-white mt-1.5 truncate">
                   {topToday ? `${topToday.product_name}` : "None"}
