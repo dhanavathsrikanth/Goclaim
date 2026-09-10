@@ -38,6 +38,8 @@
     "wrangler": "^4.130.0"
   },
   "optionalDependencies": {
-    "@ast-grep/napi-linux-x64-gnu": "0.40.5"
+    "@ast-grep/napi-linux-x64-gnu": "0.40.5",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.1.17",
+    "lightningcss-linux-x64-gnu": "1.30.2"
   }
 }
