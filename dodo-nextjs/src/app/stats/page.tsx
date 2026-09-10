@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicStats } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Stats | goclaim.space",
   description:

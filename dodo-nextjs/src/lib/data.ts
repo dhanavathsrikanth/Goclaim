@@ -12,7 +12,19 @@ import type {
   DayClickCount,
 } from "./types";
 
-const sql = neon(process.env.DATABASE_URL!);
+let _sql: ReturnType<typeof neon> | null = null;
+
+function sql(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): Promise<Record<string, unknown>[]> {
+  if (!_sql) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("DATABASE_URL is not set");
+    _sql = neon(url);
+  }
+  return _sql(strings, ...(values as any)) as Promise<Record<string, unknown>[]>;
+}
 
 function toIso(value: unknown): string {
   if (value instanceof Date) return value.toISOString();

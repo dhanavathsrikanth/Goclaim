@@ -3,6 +3,7 @@ import { getPaymentById, getListingById, upsertPayment, upsertListing, getBoardL
 import { createClaimToken } from "@/lib/claim";
 import { processOutbidAlerts } from "@/lib/outbidAlerts";
 import { processMilestoneSocialAlert } from "@/lib/socialBot";
+export const dynamic = "force-dynamic";
 
 // Exchanges a (listing, pay) pair for a dashboard claim token.
 // The pay id is an unguessable random value delivered only to the payer

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
 import { triggerDailyDigestBroadcast, triggerWeeklyDigestBroadcast } from "@/lib/socialBot";
+export const dynamic = "force-dynamic";
 
 function getReceiver(): Receiver | null {
   const current = process.env.QSTASH_CURRENT_SIGNING_KEY;

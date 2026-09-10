@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getListingById, recordClick } from "@/lib/data";
 import { extractXHandle } from "@/lib/normalize";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: NextRequest,

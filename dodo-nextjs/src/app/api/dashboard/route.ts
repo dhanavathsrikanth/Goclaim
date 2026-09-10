@@ -10,6 +10,7 @@ import {
   getActiveSponsor,
 } from "@/lib/data";
 import type { BoardType } from "@/lib/types";
+export const dynamic = "force-dynamic";
 
 const BOARDS: BoardType[] = ["all-time", "today", "daily"];
 

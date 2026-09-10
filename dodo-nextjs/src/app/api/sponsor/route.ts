@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveSponsor } from "@/lib/data";
+export const dynamic = "force-dynamic";
 
 function nextMidnightUTC(): string {
   const now = new Date();

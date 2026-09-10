@@ -1,6 +1,6 @@
 "use server";
 
-import { auth, checkIsAdminInDb } from "@/lib/auth/server";
+import { getAuth, checkIsAdminInDb } from "@/lib/auth/server";
 import { redirect } from "next/navigation";
 
 export async function signInAdmin(
@@ -20,7 +20,7 @@ export async function signInAdmin(
     return { error: `Access denied. The account (${email}) does not have an admin role in the database.` };
   }
 
-  const { error } = await auth.signIn.email({
+  const { error } = await getAuth().signIn.email({
     email,
     password,
   });
@@ -50,7 +50,7 @@ export async function signUpAdmin(
     return { error: `Sign up restricted. The email (${email}) must be added to the database with admin role first.` };
   }
 
-  const { error } = await auth.signUp.email({
+  const { error } = await getAuth().signUp.email({
     email,
     name,
     password,

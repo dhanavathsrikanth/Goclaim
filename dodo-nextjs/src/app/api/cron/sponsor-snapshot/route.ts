@@ -3,6 +3,7 @@ import { Receiver } from "@upstash/qstash";
 import { snapshotSponsors, getActiveSponsor, getListingById } from "@/lib/data";
 import { announceDailyChampion } from "@/lib/composio";
 import { triggerDailyDigestBroadcast } from "@/lib/socialBot";
+export const dynamic = "force-dynamic";
 
 function getReceiver(): Receiver | null {
   const current = process.env.QSTASH_CURRENT_SIGNING_KEY;

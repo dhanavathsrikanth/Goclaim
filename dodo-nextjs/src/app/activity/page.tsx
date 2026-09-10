@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getRecentActivity } from "@/lib/data";
 import { extractDisplayUrl } from "@/lib/normalize";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Activity | goclaim.space",
   description: "Live activity on goclaim.space — bids, new listings, and #1 crowns.",

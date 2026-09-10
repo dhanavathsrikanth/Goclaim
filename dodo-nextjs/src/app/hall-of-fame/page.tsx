@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getHallOfFame } from "@/lib/data";
 import { extractDisplayUrl } from "@/lib/normalize";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Hall of Fame | goclaim.space",
   description:

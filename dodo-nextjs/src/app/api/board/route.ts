@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBoardListings } from "@/lib/data";
 import type { BoardType } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const board = (req.nextUrl.searchParams.get("board") || "all-time") as BoardType;

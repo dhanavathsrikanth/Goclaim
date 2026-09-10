@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPresenceCount, touchPresence } from "@/lib/data";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   return NextResponse.json({ viewers: await getPresenceCount() });

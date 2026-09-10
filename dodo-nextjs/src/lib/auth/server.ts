@@ -1,14 +1,33 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 import { neon } from "@neondatabase/serverless";
 
-export const auth = createNeonAuth({
-  baseUrl: process.env.NEON_AUTH_BASE_URL!,
-  cookies: {
-    secret: process.env.NEON_AUTH_COOKIE_SECRET!,
-  },
-});
+let _auth: ReturnType<typeof createNeonAuth> | null = null;
 
-const sql = neon(process.env.DATABASE_URL!);
+export function getAuth() {
+  if (!_auth) {
+    _auth = createNeonAuth({
+      baseUrl: process.env.NEON_AUTH_BASE_URL!,
+      cookies: {
+        secret: process.env.NEON_AUTH_COOKIE_SECRET!,
+      },
+    });
+  }
+  return _auth;
+}
+
+let _sql: ReturnType<typeof neon> | null = null;
+
+function sql(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): Promise<Record<string, unknown>[]> {
+  if (!_sql) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("DATABASE_URL is not set");
+    _sql = neon(url);
+  }
+  return _sql(strings, ...(values as any)) as Promise<Record<string, unknown>[]>;
+}
 
 /**
  * Checks whether the given email has the 'admin' role in the database users table.
@@ -71,7 +90,7 @@ export async function checkIsAdminInDb(email: string): Promise<boolean> {
 
 export async function getAdminSession() {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await getAuth().getSession();
     if (!session?.user?.email) return null;
 
     const email = session.user.email.trim().toLowerCase();

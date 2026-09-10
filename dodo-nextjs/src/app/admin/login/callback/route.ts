@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, checkIsAdminInDb } from "@/lib/auth/server";
+import { getAuth, checkIsAdminInDb } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await getAuth().getSession();
     const email = session?.user?.email?.trim().toLowerCase();
 
     if (!email) {

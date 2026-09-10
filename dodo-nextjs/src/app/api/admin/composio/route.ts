@@ -18,6 +18,8 @@ import {
   postTweet,
 } from "@/lib/socialBot";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const session = await getAdminSession();
   if (!session?.user) {

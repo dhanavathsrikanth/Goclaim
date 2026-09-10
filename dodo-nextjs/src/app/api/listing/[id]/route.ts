@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getListingById, upsertListing, getClicksByDay } from "@/lib/data";
 import { verifyClaimToken } from "@/lib/claim";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: NextRequest,

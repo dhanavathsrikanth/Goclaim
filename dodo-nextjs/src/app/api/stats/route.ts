@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCategoryStats, getPublicStats } from "@/lib/data";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const [categories, totals] = await Promise.all([
