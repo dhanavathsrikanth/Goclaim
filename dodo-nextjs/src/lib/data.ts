@@ -3,6 +3,7 @@ import type {
   BoardType,
   Listing,
   Payment,
+  Coupon,
   SponsorEntry,
   HallEntry,
   PublicStats,
@@ -64,6 +65,19 @@ function rowToPayment(row: Record<string, unknown>): Payment {
     checkout_session_id: String(row.checkout_session_id ?? ""),
     amount: Number(row.amount),
     status: row.status as Payment["status"],
+    created_at: toIso(row.created_at),
+    coupon_code: String(row.coupon_code ?? ""),
+  };
+}
+
+function rowToCoupon(row: Record<string, unknown>): Coupon {
+  return {
+    code: String(row.code),
+    max_uses: Number(row.max_uses),
+    uses: Number(row.uses),
+    amount: Number(row.amount),
+    active: Boolean(row.active),
+    expires_at: row.expires_at ? toIso(row.expires_at) : null,
     created_at: toIso(row.created_at),
   };
 }
@@ -646,16 +660,82 @@ export async function getPaymentByCheckoutSession(
 export async function upsertPayment(payment: Payment): Promise<void> {
   await sql`
     insert into payments (
-      id, listing_id, checkout_session_id, amount, status, created_at
+      id, listing_id, checkout_session_id, amount, status, created_at, coupon_code
     ) values (
       ${payment.id}, ${payment.listing_id}, ${payment.checkout_session_id},
-      ${payment.amount}, ${payment.status}, ${payment.created_at}
+      ${payment.amount}, ${payment.status}, ${payment.created_at},
+      ${payment.coupon_code ?? ""}
     )
     on conflict (id) do update set
       listing_id = excluded.listing_id,
       checkout_session_id = excluded.checkout_session_id,
       amount = excluded.amount,
       status = excluded.status,
-      created_at = excluded.created_at
+      created_at = excluded.created_at,
+      coupon_code = excluded.coupon_code
   `;
+}
+
+// Coupons — free starter listings (no invite chain)
+export async function getCoupon(code: string): Promise<Coupon | undefined> {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return undefined;
+  const rows = await sql`select * from coupons where code = ${normalized} limit 1`;
+  return rows.length > 0
+    ? rowToCoupon(rows[0] as Record<string, unknown>)
+    : undefined;
+}
+
+export async function getCouponUsesLeft(code: string): Promise<number | null> {
+  const c = await getCoupon(code);
+  if (!c) return null;
+  return Math.max(0, c.max_uses - c.uses);
+}
+
+// Atomic consume: succeeds only if active, unexpired, and uses left.
+// Returns true if this caller claimed one use.
+export async function consumeCoupon(code: string): Promise<boolean> {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return false;
+  const rows = await sql`
+    update coupons
+    set uses = uses + 1
+    where code = ${normalized}
+      and active = true
+      and (expires_at is null or expires_at > now())
+      and uses < max_uses
+    returning code
+  `;
+  return rows.length > 0;
+}
+
+// Strict anti-abuse: has this email already redeemed ANY coupon?
+export async function hasEmailUsedCoupon(email: string): Promise<boolean> {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) return false;
+  const rows = await sql`
+    select p.id
+    from payments p
+    join listings l on l.id = p.listing_id
+    where l.claim_email = ${normalized}
+      and p.coupon_code <> ''
+      and p.status = 'confirmed'
+    limit 1
+  `;
+  return rows.length > 0;
+}
+
+// Strict anti-abuse: has this domain/handle already redeemed ANY coupon?
+export async function hasDomainUsedCoupon(normalizedUrl: string): Promise<boolean> {
+  if (!normalizedUrl) return false;
+  const rows = await sql`
+    select p.id
+    from payments p
+    join listings l on l.id = p.listing_id
+    where l.normalized_url = ${normalizedUrl}
+      and p.coupon_code <> ''
+      and p.status = 'confirmed'
+    limit 1
+  `;
+  return rows.length > 0;
 }

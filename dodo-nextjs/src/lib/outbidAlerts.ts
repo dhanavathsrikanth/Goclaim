@@ -77,7 +77,7 @@ export async function processOutbidAlerts(
 
       const differenceAmount = Math.max(1, targetReclaimBid - overtaken.total_bid);
 
-      const counterBidUrl = `${SITE_URL}/?raise=${encodeURIComponent(
+      const counterBidUrl = `${SITE_URL}/api/counter-bid?listing=${encodeURIComponent(
         overtaken.slug || overtaken.id
       )}&amount=${targetReclaimBid}`;
 

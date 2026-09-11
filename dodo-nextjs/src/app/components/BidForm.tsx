@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CATEGORIES, Listing } from "@/lib/types";
-import { isValidUrlOrDomain, extractFaviconDomain } from "@/lib/normalize";
+import { isValidUrlOrDomain, extractFaviconDomain, normalizeUrl } from "@/lib/normalize";
 import ConfirmRankModal from "./ConfirmRankModal";
+import ShareListingModal from "./ShareListingModal";
 import CategoryIcon from "./CategoryIcon";
 
 type TargetInfo = {
@@ -30,6 +31,7 @@ export default function BidForm({
   onClearTarget,
   onBidSubmitted,
   initialUrl,
+  initialAmount,
 }: BidFormProps) {
   const [url, setUrl] = useState(initialUrl ?? "");
   const [category, setCategory] = useState("Other");
@@ -37,6 +39,43 @@ export default function BidForm({
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [showCoupon, setShowCoupon] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [email, setEmail] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareInfo, setShareInfo] = useState<{ name: string; displayUrl: string; path: string } | null>(null);
+  const [couponStatus, setCouponStatus] = useState<{
+    valid: boolean;
+    uses_left: number;
+    max_uses: number;
+  } | null>(null);
+
+  // Live scarcity lookup: debounce while typing the code.
+  useEffect(() => {
+    const code = coupon.trim().toUpperCase();
+    if (!showCoupon || code.length < 3) {
+      setCouponStatus(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/coupon?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (res.ok) {
+          setCouponStatus({
+            valid: !!data.valid,
+            uses_left: data.uses_left ?? 0,
+            max_uses: data.max_uses ?? 0,
+          });
+        } else {
+          setCouponStatus(null);
+        }
+      } catch {
+        // ignore — checkout API is source of truth
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [coupon, showCoupon]);
 
   const faviconDomain = extractFaviconDomain(url);
   const liveFaviconUrl = faviconDomain
@@ -52,14 +91,38 @@ export default function BidForm({
 
   const minBid = 2;
   const topBidPlus5 = topBid + 5;
+  const couponCode = coupon.trim().toUpperCase();
+  const isFreeClaim = showCoupon && couponCode.length > 0;
 
   const activeTarget = selectedTarget || hoveredTarget || null;
   const targetRank = activeTarget ? activeTarget.rank : 1;
-  const targetPrice = activeTarget
+  // Free coupon always claims a $2 starter (joins board, doesn't snipe #1).
+  const targetPrice = isFreeClaim
+    ? minBid
+    : activeTarget
     ? activeTarget.price
+    : initialAmount && !isNaN(Number(initialAmount)) && Number(initialAmount) > 0
+    ? Number(initialAmount)
     : topBid === 0
     ? minBid
     : topBidPlus5;
+
+  const existingListing = listings?.find(
+    (l) => (faviconDomain && l.normalized_url.includes(faviconDomain)) || l.url === url.trim()
+  );
+  const diffToPay = existingListing && targetPrice > existingListing.total_bid
+    ? targetPrice - existingListing.total_bid
+    : targetPrice;
+
+  const confirmDisplayUrl = (() => {
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    try {
+      return normalizeUrl(trimmed);
+    } catch {
+      return trimmed;
+    }
+  })();
 
   function handleInputFocus() {
     if (!selectedTarget && hoveredTarget) {
@@ -87,6 +150,16 @@ export default function BidForm({
       return;
     }
 
+    if (isFreeClaim && !email.trim()) {
+      setError("Email is required for free claims (1 free per email).");
+      return;
+    }
+
+    if (isFreeClaim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Enter a valid email for the free claim.");
+      return;
+    }
+
     // Open confirmation dialog
     setModalError(null);
     setModalOpen(true);
@@ -104,6 +177,9 @@ export default function BidForm({
           url: url.trim(),
           amount: targetPrice,
           category: category === "All" ? "Other" : category,
+          ...(isFreeClaim
+            ? { coupon: couponCode, email: email.trim().toLowerCase() }
+            : {}),
         }),
       });
 
@@ -111,6 +187,22 @@ export default function BidForm({
 
       if (!res.ok) {
         setModalError(data.error || "Something went wrong.");
+        return;
+      }
+
+      // Free coupon claim → no redirect. Show share popup instantly.
+      if (data.free_claim) {
+        setModalOpen(false);
+        setShareInfo({
+          name: data.listing_name || url.trim(),
+          displayUrl: data.display_url || data.normalized_url || url.trim(),
+          path: data.listing_url || "/",
+        });
+        setShareOpen(true);
+        setCoupon("");
+        setEmail("");
+        setShowCoupon(false);
+        onBidSubmitted?.();
         return;
       }
 
@@ -128,10 +220,19 @@ export default function BidForm({
   return (
     <section id="claim" className="scroll-mt-6">
       <h2 className="mx-auto max-w-4xl text-center text-[28px] font-semibold tracking-[-0.03em] text-pretty md:text-[40px] transition-all">
-        Claim #{targetRank} for{" "}
-        <span className="font-mono tabular-nums font-bold text-foreground">
-          ${targetPrice.toLocaleString()}
-        </span>
+        {isFreeClaim ? (
+          <>
+            Claim your spot for{" "}
+            <span className="font-mono tabular-nums font-bold text-emerald-600">$0</span>
+          </>
+        ) : (
+          <>
+            Claim #{targetRank} for{" "}
+            <span className="font-mono tabular-nums font-bold text-foreground">
+              ${targetPrice.toLocaleString()}
+            </span>
+          </>
+        )}
       </h2>
 
       {activeTarget && activeTarget.rank > 1 && (
@@ -244,16 +345,78 @@ export default function BidForm({
                 </svg>
                 Processing
               </span>
+            ) : isFreeClaim ? (
+              "Claim Free Starter"
+            ) : existingListing && diffToPay < targetPrice ? (
+              `Reclaim #${targetRank} · Pay $${diffToPay.toLocaleString()} diff`
             ) : (
-              "Claim rank"
+              `Claim #${targetRank} for $${targetPrice.toLocaleString()}`
             )}
           </button>
         </div>
 
         {error && <p className="mx-auto text-sm text-red-600">{error}</p>}
 
+        <div className="mx-auto w-[90%] md:w-full max-w-4xl">
+          {!showCoupon ? (
+            <button
+              type="button"
+              onClick={() => setShowCoupon(true)}
+              className="mx-auto block text-xs font-medium text-primary hover:text-primary/80 cursor-pointer"
+            >
+              Have a code? Claim FREE →
+            </button>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={coupon}
+                  onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                  placeholder="Coupon code (e.g. EARLY100)"
+                  aria-label="Coupon code"
+                  className="h-10 flex-1 rounded-lg border border-input bg-white px-3 font-mono text-sm uppercase tracking-wider placeholder:normal-case placeholder:font-sans placeholder:tracking-normal focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
+                />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email for free claim"
+                  aria-label="Email for free claim"
+                  className="h-10 flex-1 rounded-lg border border-input bg-white px-3 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCoupon(false);
+                    setCoupon("");
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer shrink-0 px-1"
+                >
+                  Remove
+                </button>
+              </div>
+              {couponStatus && (
+                <p className="text-center text-[11px] font-medium tabular-nums">
+                  {couponStatus.valid ? (
+                    <span className="text-emerald-600">
+                      {couponStatus.uses_left}/{couponStatus.max_uses} free claims left — hurry 🔥
+                    </span>
+                  ) : (
+                    <span className="text-red-500">
+                      Code exhausted or expired — try a paid bid.
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         <p className="mx-auto text-center text-xs text-muted-foreground">
-          {activeTarget && activeTarget.rank > 1
+          {isFreeClaim
+            ? "Free code covers a $2 starter rank. 1 per domain · 1 per email · new listings only."
+            : activeTarget && activeTarget.rank > 1
             ? `Outbidding ${activeTarget.name} to take spot #${activeTarget.rank}. Fixed at $${targetPrice.toLocaleString()}.`
             : topBid > 0
             ? `Current #1 is $${topBid.toLocaleString()}. Claim #1 for $${topBidPlus5.toLocaleString()}.`
@@ -269,10 +432,23 @@ export default function BidForm({
         onConfirm={handleConfirmCheckout}
         rank={targetRank}
         amount={targetPrice}
+        diffAmount={diffToPay < targetPrice ? diffToPay : undefined}
         category={category}
         loading={loading}
         error={modalError}
+        displayUrl={confirmDisplayUrl}
+        coupon={isFreeClaim ? couponCode : ""}
+        isFree={isFreeClaim}
       />
+      {shareInfo && (
+        <ShareListingModal
+          isOpen={shareOpen}
+          listingName={shareInfo.name}
+          displayUrl={shareInfo.displayUrl}
+          listingPath={shareInfo.path}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </section>
   );
 }

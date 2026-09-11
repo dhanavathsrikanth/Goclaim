@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import BidForm from "./components/BidForm";
 import LeaderboardRow from "./components/LeaderboardRow";
+import LeaderboardSponsorRow from "./components/LeaderboardSponsorRow";
 import BoardSwitcher from "./components/BoardSwitcher";
 import CategoryFilter from "./components/CategoryFilter";
-import SponsorBanner from "./components/SponsorBanner";
 import LogoWall from "./components/LogoWall";
 import MilestoneStrip from "./components/MilestoneStrip";
 import ActivityFeed from "./components/ActivityFeed";
@@ -30,12 +30,10 @@ type SponsorData = {
 
 export default function Home() {
   const [board, setBoard] = useState<BoardType>("all-time");
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [allListings, setAllListings] = useState<Listing[]>([]);
   const [topBid, setTopBid] = useState(0);
   const [topBidAll, setTopBidAll] = useState(0);
-  const [total, setTotal] = useState(0);
   const [category, setCategory] = useState("All");
-  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
   const [catStats, setCatStats] = useState<CategoryStat[]>([]);
   const [sponsorData, setSponsorData] = useState<SponsorData | null>(null);
   const [prefill, setPrefill] = useState<{ url: string; amount: string } | null>(null);
@@ -48,20 +46,33 @@ export default function Home() {
     try {
       const params = new URLSearchParams();
       if (board) params.set("board", board);
-      if (category && category !== "All") params.set("category", category);
       const res = await fetch(`/api/board?${params.toString()}`);
       const data = await res.json();
-      setListings(data.listings ?? []);
+      setAllListings(data.listings ?? []);
       setTopBid(data.top_bid ?? 0);
       setTopBidAll(data.top_bid_all ?? data.top_bid ?? 0);
-      setTotal(data.total ?? 0);
-      setCatCounts(data.categories || {});
     } catch (err) {
       console.error("Failed to fetch board:", err);
     } finally {
       setLoading(false);
     }
-  }, [board, category]);
+  }, [board]);
+
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const l of allListings) {
+      counts[l.category] = (counts[l.category] || 0) + 1;
+    }
+    return counts;
+  }, [allListings]);
+
+  const listings = useMemo(() => {
+    if (!category || category === "All") return allListings;
+    return allListings.filter((l) => l.category === category);
+  }, [allListings, category]);
+
+  const total = listings.length;
+  const boardTotal = allListings.length;
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -185,64 +196,7 @@ export default function Home() {
     <div className="mx-auto flex w-full max-w-5xl flex-col px-4">
       <h1 className="sr-only">goclaim.space</h1>
 
-      {/* Top Banner on Hover / Spot Selection */}
-      {activeTarget && (
-        <aside
-          role="region"
-          aria-label="Claim Spot Banner"
-          className="fixed top-0 left-0 right-0 z-50 animate-in slide-in-from-top-2 duration-150 border-b border-primary/20 bg-background/95 backdrop-blur-md shadow-md"
-        >
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-primary" />
-              </span>
-              <p className="truncate text-xs sm:text-sm font-medium text-foreground">
-                Claim Spot <span className="font-bold text-primary font-mono">#{activeTarget.rank}</span> for{" "}
-                <span className="font-bold font-mono text-foreground">${activeTarget.price.toLocaleString()}</span>
-                {activeTarget.name && (
-                  <span className="hidden sm:inline text-muted-foreground ml-1.5">
-                    · Outbid <span className="font-medium text-foreground">{activeTarget.name}</span>
-                  </span>
-                )}
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTarget(activeTarget);
-                  document.getElementById("claim")?.scrollIntoView({ behavior: "smooth" });
-                  const input = document.getElementById("identity");
-                  if (input) {
-                    setTimeout(() => input.focus(), 350);
-                  }
-                }}
-                className="rounded-full bg-primary px-3.5 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
-              >
-                Claim spot #{activeTarget.rank} →
-              </button>
-              {selectedTarget && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedTarget(null);
-                    setHoveredTarget(null);
-                  }}
-                  className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  title="Reset to #1"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-3.5">
-                    <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </aside>
-      )}
 
       {/* 1. Hero Claim Form & Heading at the very top */}
       <div className="mt-4 sm:mt-6">
@@ -258,6 +212,7 @@ export default function Home() {
           }}
           onBidSubmitted={fetchBoard}
           initialUrl={prefill?.url}
+          initialAmount={prefill?.amount}
         />
       </div>
 
@@ -265,19 +220,6 @@ export default function Home() {
       <div className="mt-6 sm:mt-8">
         <BoardSwitcher active={board} onChange={handleBoardChange} />
       </div>
-
-      {/* 3. Daily Sponsor Banner (if present, placed below switcher) */}
-      {sponsorData?.sponsor && (
-        <div className="mt-6">
-          <SponsorBanner sponsor={sponsorData.sponsor} validUntil={sponsorData.valid_until} />
-        </div>
-      )}
-
-      {sponsorData && sponsorData.top3.length > 0 && (
-        <div className="mt-6">
-          <LogoWall entries={sponsorData.top3} />
-        </div>
-      )}
 
       <MilestoneStrip />
 
@@ -303,7 +245,7 @@ export default function Home() {
       </div>
 
       <div id="leaderboard" className="mt-3 scroll-mt-6">
-        <CategoryFilter active={category} onChange={handleCategoryChange} counts={catCounts} totalCount={total} />
+        <CategoryFilter active={category} onChange={handleCategoryChange} counts={catCounts} totalCount={boardTotal} />
       </div>
 
       <div className="mt-4 flex scroll-mt-6 flex-col gap-4">
@@ -317,7 +259,16 @@ export default function Home() {
             <p className="text-sm text-muted-foreground/70">Be the first to bid and claim #1.</p>
           </div>
         ) : (
-          <ol className="flex flex-col">
+          <ol className="flex flex-col gap-2 sm:gap-2.5">
+            {/* Pinned #0 Active Daily Sponsor Row */}
+            {sponsorData?.sponsor && (
+              <li key="daily-sponsor">
+                <LeaderboardSponsorRow
+                  sponsor={sponsorData.sponsor}
+                  validUntil={sponsorData.valid_until}
+                />
+              </li>
+            )}
             {listings.map((listing, i) => {
               const rank = i + 1;
               const spotClaimPrice = rank === 1 ? claimAmount : Math.max(2, listing.total_bid + 1);
@@ -333,6 +284,7 @@ export default function Home() {
                     listing={listing}
                     rank={rank}
                     claimAmount={claimAmount}
+                    isSelected={selectedTarget?.rank === rank}
                     source={
                       category && category !== "All"
                         ? `category_${category.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`
@@ -399,6 +351,12 @@ export default function Home() {
         </section>
       )}
 
+      {sponsorData && sponsorData.top3.length > 0 && (
+        <div className="mt-8">
+          <LogoWall entries={sponsorData.top3} />
+        </div>
+      )}
+
       <ActivityFeed />
 
       {catStats.length > 0 && (
@@ -447,7 +405,7 @@ export default function Home() {
             </div>
             <div className="rounded-2xl bg-card px-3 py-3 text-center shadow-[0_12px_50px_rgba(40,38,36,0.08)] border border-border/60">
               <p className="flex h-8 sm:h-9 justify-center font-mono text-xl sm:text-2xl font-semibold tabular-nums tracking-tight">
-                {total}
+                {boardTotal}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">products added</p>
             </div>

@@ -9,6 +9,7 @@ type Props = {
   rank: number;
   claimAmount: number;
   source?: string;
+  isSelected?: boolean;
   onHover?: (hovering: boolean) => void;
   onSelectRank?: () => void;
 };
@@ -26,9 +27,9 @@ function timeAgo(iso: string): string {
 }
 
 const TINT: Record<number, string> = {
-  1: "bg-primary/14",
-  2: "bg-primary/8",
-  3: "bg-primary/4",
+  1: "bg-primary/14 border border-primary/30 shadow-xs",
+  2: "bg-primary/8 border border-primary/20",
+  3: "bg-primary/4 border border-primary/15",
 };
 
 const FAVICON_SIZE: Record<number, string> = {
@@ -41,6 +42,7 @@ export default function LeaderboardRow({
   rank,
   claimAmount,
   source = "all-time",
+  isSelected = false,
   onHover,
   onSelectRank,
 }: Props) {
@@ -56,7 +58,7 @@ export default function LeaderboardRow({
   const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     // Don't trigger outer card redirect if user clicked a link or button inside (e.g. see details or claim this rank)
-    if (target.closest("a") || target.closest("button")) {
+    if (target.closest("a") || target.closest("button") || target.closest("[role='button']")) {
       return;
     }
     window.open(outboundUrl, "_blank", "noopener,noreferrer");
@@ -75,12 +77,54 @@ export default function LeaderboardRow({
       aria-label={`Visit ${listing.product_name || displayUrl}`}
       onMouseEnter={() => onHover?.(true)}
       onMouseLeave={() => onHover?.(false)}
-      className={`group cursor-pointer overflow-hidden rounded-xl md:rounded-2xl px-3 md:px-4 transition-all hover:bg-muted/60 ${
-        tint ?? "bg-transparent border-t border-border rounded-none md:rounded-none"
-      }`}
+      className={`group relative cursor-pointer overflow-hidden rounded-xl md:rounded-2xl transition-all ${
+        isSelected
+          ? "ring-2 ring-primary border-primary/50 bg-primary/10 shadow-sm"
+          : "hover:bg-muted/60"
+      } ${tint ?? "bg-card/40 border border-border/60 hover:border-border"}`}
     >
-      <div className="flex items-start gap-2 py-3 md:gap-3 md:py-4">
-        <span className="hidden md:inline-flex min-w-7 md:min-w-10 pt-1 text-xs md:text-base tabular-nums text-muted-foreground">
+      {/* Short Claim Banner at Top of Card */}
+      <div
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelectRank?.();
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Claim spot #${rank} for $${spotClaimPrice.toLocaleString()}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelectRank?.();
+          }
+        }}
+        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs border-b cursor-pointer transition-colors ${
+          isSelected
+            ? "flex bg-primary/20 border-primary/40 text-primary font-semibold"
+            : "flex md:hidden md:group-hover:flex bg-primary/10 hover:bg-primary/20 border-primary/20 text-primary"
+        }`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="relative flex size-1.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+          </span>
+          <span className="truncate font-medium text-[11px] sm:text-xs">
+            Claim <span className="font-bold font-mono">#{rank}</span> for{" "}
+            <span className="font-bold font-mono">${spotClaimPrice.toLocaleString()}</span>
+          </span>
+        </div>
+
+        <span className="shrink-0 font-semibold text-[11px] sm:text-xs flex items-center gap-1 hover:underline ml-2">
+          <span>Claim spot</span>
+          <span>→</span>
+        </span>
+      </div>
+
+      <div className="flex items-start gap-2.5 p-3 md:p-4 md:gap-3.5">
+        <span className="hidden md:inline-flex min-w-7 md:min-w-9 pt-1 text-xs md:text-base tabular-nums text-muted-foreground font-medium">
           {rank}
         </span>
 
@@ -173,7 +217,7 @@ export default function LeaderboardRow({
               }}
               className="font-medium text-primary hover:text-primary/80 hover:underline cursor-pointer"
             >
-              claim this rank for ${spotClaimPrice.toLocaleString()}
+              claim for ${spotClaimPrice.toLocaleString()}
             </button>
           </p>
         </div>

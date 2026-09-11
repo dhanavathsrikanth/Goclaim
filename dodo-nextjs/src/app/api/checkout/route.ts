@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { normalizeUrl, slugify, extractXHandle } from "@/lib/normalize";
+import { normalizeUrl, slugify, extractXHandle, extractDisplayUrl } from "@/lib/normalize";
 import { validateBid } from "@/lib/validation";
-import { getListingByNormalizedUrl, getListingBySlug, upsertListing, upsertPayment, getListings } from "@/lib/data";
+import {
+  getListingByNormalizedUrl,
+  getListingBySlug,
+  getListingById,
+  upsertListing,
+  upsertPayment,
+  getListings,
+  getBoardListings,
+  getCoupon,
+  consumeCoupon,
+  hasEmailUsedCoupon,
+  hasDomainUsedCoupon,
+} from "@/lib/data";
 import { getCurrentTopBid } from "@/lib/ranking";
+import { createClaimToken } from "@/lib/claim";
+import { processOutbidAlerts } from "@/lib/outbidAlerts";
+import { processMilestoneSocialAlert } from "@/lib/socialBot";
 import { CATEGORIES } from "@/lib/types";
 
 function generateId(): string {
@@ -27,6 +42,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { url, amount } = body;
+    const rawCoupon = typeof body.coupon === "string" ? body.coupon.trim().toUpperCase() : "";
+    const rawEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required." }, { status: 400 });
@@ -59,6 +76,155 @@ export async function POST(req: NextRequest) {
         { error: errorMessages[validation.error!] || "Invalid bid." },
         { status: 400 }
       );
+    }
+
+    // ---- FREE COUPON CLAIM (no Dodo, no invite chain) ----
+    // Strict rules: new domains only, starter $2 only, 1 per domain, 1 per email.
+    if (rawCoupon) {
+      const couponErrors: Record<string, string> = {
+        COUPON_INVALID: "That code doesn't exist. Check spelling.",
+        COUPON_EXPIRED: "That code has expired.",
+        COUPON_EXHAUSTED: "That code is fully claimed — no uses left.",
+        COUPON_INACTIVE: "That code is no longer active.",
+        COUPON_EMAIL_REQUIRED: "Email is required for free claims (1 per email).",
+        COUPON_EMAIL_INVALID: "Enter a valid email for the free claim.",
+        COUPON_EMAIL_USED: "This email already claimed a free listing.",
+        COUPON_DOMAIN_USED: "This domain / handle already claimed a free listing.",
+        COUPON_REBID_NOT_ALLOWED: "Free codes are for new listings only — this URL is already ranked. Raise it with a paid bid.",
+        COUPON_STARTER_ONLY: "Free codes cover a $2 starter listing only. Paid bids take higher ranks.",
+      };
+      const couponFail = (code: string, status = 400) =>
+        NextResponse.json(
+          { error: couponErrors[code] || "Invalid coupon.", code },
+          { status }
+        );
+
+      const coupon = await getCoupon(rawCoupon);
+      if (!coupon) return couponFail("COUPON_INVALID", 404);
+      if (!coupon.active) return couponFail("COUPON_INACTIVE");
+      if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
+        return couponFail("COUPON_EXPIRED");
+      if (coupon.uses >= coupon.max_uses) return couponFail("COUPON_EXHAUSTED");
+
+      if (!rawEmail) return couponFail("COUPON_EMAIL_REQUIRED");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail))
+        return couponFail("COUPON_EMAIL_INVALID");
+
+      // Starter-only: free covers exactly the coupon amount ($2).
+      if (bidAmount !== coupon.amount || (validation.amountToPay || bidAmount) !== coupon.amount)
+        return couponFail("COUPON_STARTER_ONLY");
+
+      const normalizedForCoupon = normalizeUrl(url);
+      const existingForCoupon = await getListingByNormalizedUrl(normalizedForCoupon);
+      if (existingForCoupon && existingForCoupon.status === "confirmed")
+        return couponFail("COUPON_REBID_NOT_ALLOWED");
+      if (await hasDomainUsedCoupon(normalizedForCoupon))
+        return couponFail("COUPON_DOMAIN_USED");
+      if (await hasEmailUsedCoupon(rawEmail))
+        return couponFail("COUPON_EMAIL_USED");
+
+      // Atomic claim — loses race = exhausted.
+      const claimed = await consumeCoupon(rawCoupon);
+      if (!claimed) return couponFail("COUPON_EXHAUSTED");
+
+      // Build / reuse listing, confirm instantly at $2 rank value.
+      const xHandleC = extractXHandle(url) || extractXHandle(normalizedForCoupon);
+      let listingIdC: string;
+      let productNameC = "";
+      let faviconUrlC = "";
+      let slugC = "";
+      const nowIso = new Date().toISOString();
+      if (existingForCoupon) {
+        listingIdC = existingForCoupon.id;
+        productNameC = existingForCoupon.product_name;
+        faviconUrlC = existingForCoupon.favicon_url;
+        slugC = existingForCoupon.slug;
+      } else {
+        listingIdC = generateId();
+        if (xHandleC) {
+          productNameC = `@${xHandleC}`;
+          faviconUrlC = "https://www.google.com/s2/favicons?domain=x.com&sz=64";
+        } else {
+          try {
+            const parsed = new URL(
+              normalizedForCoupon.startsWith("http") ? normalizedForCoupon : `https://${normalizedForCoupon}`
+            );
+            productNameC = parsed.hostname.replace("www.", "");
+            faviconUrlC = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
+          } catch {
+            productNameC = normalizedForCoupon;
+          }
+        }
+        slugC = await uniqueSlug(normalizedForCoupon);
+      }
+
+      const paymentIdC = generatePaymentId();
+      const listingRow = {
+        id: listingIdC,
+        url: existingForCoupon
+          ? existingForCoupon.url
+          : xHandleC
+            ? `https://x.com/${xHandleC}`
+            : url.trim().startsWith("@")
+              ? `https://x.com/${url.trim().slice(1).trim()}`
+              : url.trim(),
+        normalized_url: normalizedForCoupon,
+        product_name: productNameC,
+        description: existingForCoupon?.description ?? "",
+        favicon_url: faviconUrlC,
+        category,
+        total_bid: coupon.amount,
+        click_count: existingForCoupon?.click_count ?? 0,
+        created_at: existingForCoupon?.created_at ?? nowIso,
+        updated_at: nowIso,
+        status: "confirmed" as const,
+        claim_email: rawEmail,
+        banner_url: existingForCoupon?.banner_url ?? "",
+        logo_url: existingForCoupon?.logo_url ?? "",
+        creative_approved: existingForCoupon?.creative_approved ?? false,
+        slug: slugC,
+      };
+      await upsertListing(listingRow);
+      await upsertPayment({
+        id: paymentIdC,
+        listing_id: listingIdC,
+        checkout_session_id: `coupon_${rawCoupon}`,
+        amount: coupon.amount,
+        status: "confirmed",
+        created_at: nowIso,
+        coupon_code: rawCoupon,
+      });
+
+      // Feed activity / alerts (best-effort, never blocks claim).
+      try {
+        const fresh = await getListingById(listingIdC);
+        if (fresh) {
+          await processOutbidAlerts(fresh, 0).catch(() => {});
+          const topBoard = await getBoardListings("all-time").catch(() => []);
+          if (topBoard && topBoard.length > 0) {
+            const newRank = topBoard.findIndex((l) => l.id === listingIdC) + 1;
+            await processMilestoneSocialAlert(fresh, 999, newRank > 0 ? newRank : 999).catch(() => {});
+          }
+        }
+      } catch {}
+
+      let claimToken = "";
+      try {
+        claimToken = createClaimToken(rawEmail);
+      } catch {}
+
+      return NextResponse.json({
+        free_claim: true,
+        listing_id: listingIdC,
+        slug: slugC,
+        amount: coupon.amount,
+        coupon: rawCoupon,
+        claim_token: claimToken,
+        listing_url: `/listings/${slugC}`,
+        listing_name: productNameC,
+        normalized_url: normalizedForCoupon,
+        display_url: extractDisplayUrl(normalizedForCoupon),
+      });
     }
 
     const normalizedUrl = normalizeUrl(url);

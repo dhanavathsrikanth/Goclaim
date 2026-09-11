@@ -10,6 +10,8 @@ import { announceTakeover } from "@/lib/composio";
 import { verifyDodoWebhook, isLiveWebhookSecret } from "@/lib/dodoWebhook";
 import { processOutbidAlerts } from "@/lib/outbidAlerts";
 import { processMilestoneSocialAlert } from "@/lib/socialBot";
+import { sendListingConfirmedEmail } from "@/lib/email";
+import { createClaimToken } from "@/lib/claim";
 
 export async function POST(req: NextRequest) {
   try {
@@ -94,6 +96,27 @@ export async function POST(req: NextRequest) {
       console.log(
         `Payment confirmed: $${payment.amount} for listing ${listing.id} (${listing.normalized_url}). New total: $${listing.total_bid}`
       );
+
+      // Send Listing Confirmed & Dashboard Magic Link email to founder
+      const claimEmail = listing.claim_email || (typeof customerEmail === "string" ? customerEmail.trim().toLowerCase() : "");
+      if (claimEmail && claimEmail.includes("@")) {
+        try {
+          const topBoard = await getBoardListings("all-time");
+          const rank = topBoard.findIndex((l) => l.id === listing.id) + 1 || 1;
+          const token = createClaimToken(claimEmail);
+          await sendListingConfirmedEmail({
+            to: claimEmail,
+            listing,
+            rank,
+            paidAmount: payment.amount,
+            totalBid: listing.total_bid,
+            claimToken: token,
+            category: listing.category || "General",
+          });
+        } catch (mailErr) {
+          console.warn("Listing confirmation email error:", mailErr);
+        }
+      }
 
       // Trigger Outbid Alerts to overtaken founders
       try {

@@ -37,6 +37,22 @@ export default function FAQPage() {
       a: "No. All payments are final and non-refundable, even if you are outranked, get fewer clicks than hoped, or the listing is later removed for rule violations.",
     },
     {
+      q: "Is there a free way to try it?",
+      a: "Yes — promo codes like EARLY100 cover a $2 starter listing for free. Limits: 1 free per domain/handle, 1 per email, new listings only. Free listings rank at $2 and any paid bid can outrank them.",
+    },
+    {
+      q: "Is this a scam? Do I get customers?",
+      a: "No scam, but no promises either. You pay for a public rank — not for traffic, customers, or revenue. Anyone can outbid you at any time, and all payments are final. Rank signals who paid most, nothing more.",
+    },
+    {
+      q: "What content is banned?",
+      a: "Scams, phishing, malware, adult sexual content, hate, violent extremism, impersonation, and chat/invite links. We remove violations without refund. Report abuse via the contact channel on the About page.",
+    },
+    {
+      q: "What data do you keep?",
+      a: "Listings, bids, and clicks are public by design. Claim emails stay private and are only used for your dashboard link and coupon-limit enforcement. Payments run through Dodo Payments — we never see your card. Details in the Privacy Policy.",
+    },
+    {
       q: "Is this an endorsement or recommendation?",
       a: "No. goclaim.space is not a launch vote. There is no upvote, no hunter, and no review queue. Rank is only what you pay. The board is public, rankings stay visible, and one payment counts across All-time, Today, and Daily windows.",
     },

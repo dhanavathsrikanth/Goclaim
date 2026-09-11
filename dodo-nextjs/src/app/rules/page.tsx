@@ -56,6 +56,25 @@ export default function RulesPage() {
           </section>
 
           <section>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Free coupon codes</h2>
+            <ul className="space-y-2 list-disc list-inside text-foreground/80">
+              <li>Promo codes (e.g. EARLY100) cover a $2 starter listing — $0 due, $2 rank value.</li>
+              <li>1 free claim per domain/handle · 1 per email · new listings only. Free listings can be outranked by any paid bid.</li>
+              <li>Codes have limited uses and an expiry date. Abuse (duplicates, disposable-email farming, scripting) gets listings removed.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Content &amp; moderation</h2>
+            <ul className="space-y-2 list-disc list-inside text-foreground/80">
+              <li>No scams, phishing, malware, adult sexual content, hate, or violent extremism. No impersonation.</li>
+              <li>You must own the product or have permission to promote it. You must be 18+ to pay.</li>
+              <li>We may remove rule-breaking, fraudulent, or legally problematic listings at any time — without refund. Removed listings vanish from all boards.</li>
+              <li>Full legal terms live in the <a href="/terms" className="underline underline-offset-2">Terms of Service</a>; data handling in the <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>.</li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Links</h2>
             <ul className="space-y-2 list-disc list-inside text-foreground/80">
               <li>All outbound links are <code className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">rel=&quot;sponsored&quot;</code> and pass no PageRank.</li>

@@ -10,9 +10,13 @@ type Props = {
   onConfirm: () => void;
   rank: number;
   amount: number;
+  diffAmount?: number;
   category: string;
   loading: boolean;
   error?: string | null;
+  displayUrl?: string;
+  coupon?: string;
+  isFree?: boolean;
 };
 
 export default function ConfirmRankModal({
@@ -21,9 +25,13 @@ export default function ConfirmRankModal({
   onConfirm,
   rank,
   amount,
+  diffAmount,
   category,
   loading,
   error,
+  displayUrl,
+  coupon,
+  isFree,
 }: Props) {
   const [agreed, setAgreed] = useState(false);
 
@@ -78,11 +86,29 @@ export default function ConfirmRankModal({
 
         {/* Title and subtitle */}
         <h2 id="confirm-rank-title" className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Confirm this rank
+          {isFree ? "Claim your free listing" : "Confirm this rank"}
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed pr-6">
-          Check the rank and price, then agree to the Terms of Service to continue.
+          {isFree
+            ? "Check the domain and code, then agree to the Terms to go live instantly."
+            : "Check the rank and price, then agree to the Terms of Service to continue."}
         </p>
+
+        {displayUrl && (
+          <div className="mt-4 rounded-xl border border-border/60 bg-muted/40 px-3.5 py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Listing domain
+            </span>
+            <span className="block truncate font-mono text-sm font-semibold text-foreground mt-0.5">
+              {displayUrl}
+            </span>
+            {isFree && coupon && (
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                Code <span className="font-mono font-bold text-emerald-600">{coupon}</span> applied — $0 due, $2 rank value.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Rank & Price Summary Card */}
         <div className="mt-5 rounded-2xl bg-muted/60 border border-border/50 p-4 sm:p-5 flex items-start justify-between gap-4">
@@ -103,21 +129,31 @@ export default function ConfirmRankModal({
 
           <div className="text-right shrink-0">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
-              Price
+              {diffAmount ? "Amount Due (Diff)" : "Price"}
             </span>
             <span className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight tabular-nums font-mono block mt-0.5">
-              ${amount.toLocaleString()}
+              {isFree ? "$0" : diffAmount ? `$${diffAmount.toLocaleString()}` : `$${amount.toLocaleString()}`}
             </span>
             <span className="text-xs text-muted-foreground mt-1 block">
-              Due now
+              {isFree ? "Free with code" : diffAmount ? `+$${diffAmount.toLocaleString()} diff (Total: $${amount.toLocaleString()})` : "Due now"}
             </span>
           </div>
         </div>
 
         {/* Explanatory description */}
         <p className="text-xs sm:text-[13px] text-muted-foreground leading-relaxed mt-4">
-          A listing at that rank on the public board. It goes live when payment confirms. Someone else can claim a higher rank.
+          {isFree
+            ? "Free listings go live instantly at $2 rank. Someone else can outrank you with a paid bid at any time."
+            : "A listing at that rank on the public board. It goes live when payment confirms. Someone else can claim a higher rank."}
         </p>
+
+        {isFree && (
+          <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3.5 py-2.5 text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground">Free-claim rules:</span> 1 free per
+            domain/handle · 1 per email · new listings only · $2 starter rank ·
+            abuse or duplicates get removed.
+          </div>
+        )}
 
         {/* Terms Checkbox Container */}
         <div className="mt-4 rounded-2xl border border-border/70 bg-background/60 p-3.5 sm:p-4">
@@ -132,7 +168,7 @@ export default function ConfirmRankModal({
             <span className="text-xs sm:text-[13px] text-foreground leading-snug">
               I have read and agree to the{" "}
               <Link
-                href="/rules"
+                href="/terms"
                 target="_blank"
                 className="underline underline-offset-2 hover:text-[#e57255] font-medium"
                 onClick={(e) => e.stopPropagation()}
@@ -144,7 +180,7 @@ export default function ConfirmRankModal({
           </label>
 
           <div className="text-[11px] text-muted-foreground mt-2.5 pt-2 border-t border-border/40 flex items-center gap-2">
-            <Link href="/rules" target="_blank" className="hover:underline hover:text-foreground">
+            <Link href="/privacy" target="_blank" className="hover:underline hover:text-foreground">
               Privacy
             </Link>
             <span>·</span>
@@ -178,6 +214,8 @@ export default function ConfirmRankModal({
                 </svg>
                 <span>Processing…</span>
               </>
+            ) : isFree ? (
+              "Claim free listing"
             ) : (
               "Continue to checkout"
             )}

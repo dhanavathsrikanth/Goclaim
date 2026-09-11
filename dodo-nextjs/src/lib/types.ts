@@ -29,6 +29,17 @@ export type Payment = {
   amount: number;
   status: "pending" | "confirmed" | "failed" | "refunded";
   created_at: string;
+  coupon_code?: string;
+};
+
+export type Coupon = {
+  code: string;
+  max_uses: number;
+  uses: number;
+  amount: number;
+  active: boolean;
+  expires_at: string | null;
+  created_at: string;
 };
 
 export type BoardType = "all-time" | "today" | "daily";

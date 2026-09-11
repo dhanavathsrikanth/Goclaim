@@ -35,6 +35,14 @@ export default function Footer() {
           Activity
         </Link>
         <span>·</span>
+        <Link href="/terms" className="font-medium text-primary hover:text-primary/80">
+          Terms
+        </Link>
+        <span>·</span>
+        <Link href="/privacy" className="font-medium text-primary hover:text-primary/80">
+          Privacy
+        </Link>
+        <span>·</span>
         <span className="text-muted-foreground font-normal">
           © {new Date().getFullYear()} goclaim.space
         </span>

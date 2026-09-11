@@ -17,9 +17,9 @@ export default function Logo({ className = "size-6", showText = false }: Props) 
       >
         <defs>
           <linearGradient id="navGcGrad" x1="4" y1="28" x2="28" y2="4" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#D97757" />
-            <stop offset="70%" stop-color="#E57255" />
-            <stop offset="100%" stop-color="#FF8A65" />
+            <stop offset="0%" stopColor="#D97757" />
+            <stop offset="70%" stopColor="#E57255" />
+            <stop offset="100%" stopColor="#FF8A65" />
           </linearGradient>
         </defs>
 
