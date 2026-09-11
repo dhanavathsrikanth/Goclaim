@@ -44,19 +44,23 @@ export default function ShareListingModal({
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://goclaim.space";
-  const fullUrl = `${origin}${listingPath.startsWith("/") ? listingPath : `/${listingPath}`}`;
+  const pagePath = listingPath.startsWith("/") ? listingPath : `/${listingPath}`;
+  // UTM-tagged share links: buyer's own shares show up as
+  // utm_source=x / copy in their dashboard UTM breakdown.
+  const xUrl = `${origin}${pagePath}?utm_source=x&utm_medium=share&utm_campaign=launch`;
+  const copyUrl = `${origin}${pagePath}?utm_source=copy&utm_medium=share&utm_campaign=launch`;
   const tweetText = `I just claimed ${listingName} on Outbid for FREE — rank is what you pay. Claim yours before it's gone:`;
-  const xIntent = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(fullUrl)}`;
+  const xIntent = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(xUrl)}`;
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(fullUrl);
+      await navigator.clipboard.writeText(copyUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for non-secure contexts
       const ta = document.createElement("textarea");
-      ta.value = fullUrl;
+      ta.value = copyUrl;
       document.body.appendChild(ta);
       ta.select();
       try {

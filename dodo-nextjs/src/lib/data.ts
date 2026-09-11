@@ -4,6 +4,7 @@ import type {
   Listing,
   Payment,
   Coupon,
+  UtmBreakdown,
   SponsorEntry,
   HallEntry,
   PublicStats,
@@ -51,6 +52,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     logo_url: String(row.logo_url ?? ""),
     slug: String(row.slug ?? ""),
     creative_approved: Boolean(row.creative_approved ?? false),
+    claimed_free: Boolean(row.claimed_free ?? false),
     promo_code: String(row.promo_code ?? ""),
     promo_offer: String(row.promo_offer ?? ""),
     demo_url: String(row.demo_url ?? ""),
@@ -185,7 +187,7 @@ export async function upsertListing(listing: Listing): Promise<void> {
     insert into listings (
       id, url, normalized_url, product_name, description, favicon_url,
       category, total_bid, click_count, created_at, updated_at, status,
-      claim_email, banner_url, logo_url, slug, creative_approved,
+      claim_email, banner_url, logo_url, slug, creative_approved, claimed_free,
       promo_code, promo_offer, demo_url, founder_note
     ) values (
       ${listing.id}, ${listing.url}, ${listing.normalized_url},
@@ -193,7 +195,7 @@ export async function upsertListing(listing: Listing): Promise<void> {
       ${listing.category}, ${listing.total_bid}, ${listing.click_count},
       ${listing.created_at}, ${listing.updated_at}, ${listing.status},
       ${listing.claim_email}, ${listing.banner_url}, ${listing.logo_url},
-      ${listing.slug}, ${listing.creative_approved},
+      ${listing.slug}, ${listing.creative_approved}, ${listing.claimed_free ?? false},
       ${listing.promo_code ?? ""}, ${listing.promo_offer ?? ""},
       ${listing.demo_url ?? ""}, ${listing.founder_note ?? ""}
     )
@@ -214,6 +216,7 @@ export async function upsertListing(listing: Listing): Promise<void> {
       logo_url = excluded.logo_url,
       slug = excluded.slug,
       creative_approved = excluded.creative_approved,
+      claimed_free = excluded.claimed_free,
       promo_code = excluded.promo_code,
       promo_offer = excluded.promo_offer,
       demo_url = excluded.demo_url,
@@ -352,7 +355,7 @@ export async function getHallOfFame(): Promise<HallEntry[]> {
 export async function getPublicStats(): Promise<PublicStats> {
   const rows = await sql`
     select
-      (select coalesce(sum(amount), 0)::int from payments where status = 'confirmed') as revenue,
+      (select coalesce(sum(amount), 0)::int from payments where status = 'confirmed' and coupon_code = '') as revenue,
       (select count(*)::int from listings where status = 'confirmed') as listings,
       (select count(*)::int from clicks) as clicks,
       (select coalesce(max(total_bid), 0)::int from listings where status = 'confirmed') as top_bid,
@@ -449,19 +452,66 @@ export async function touchPresence(
 }
 
 // Clicks & Analytics
+export type UtmParams = {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+};
+
+function cleanUtm(v: unknown): string {
+  return String(v || "").trim().toLowerCase().slice(0, 64);
+}
+
 export async function recordClick(
   listingId: string,
-  source = "all-time"
+  source = "all-time",
+  utm: UtmParams = {}
 ): Promise<void> {
   const safeSource = String(source || "all-time").trim().slice(0, 64) || "all-time";
+  const uSource = cleanUtm(utm.source);
+  const uMedium = cleanUtm(utm.medium);
+  const uCampaign = cleanUtm(utm.campaign);
   await sql`
     update listings
     set click_count = click_count + 1, updated_at = now()
     where id = ${listingId}
   `;
   await sql`
-    insert into clicks (listing_id, source) values (${listingId}, ${safeSource})
+    insert into clicks (listing_id, source, utm_source, utm_medium, utm_campaign)
+    values (${listingId}, ${safeSource}, ${uSource}, ${uMedium}, ${uCampaign})
   `;
+}
+
+// UTM campaign breakdown: which off-site pushes drove clicks
+// (buyer shares /listings/slug?utm_source=x&utm_medium=post etc).
+export async function getUtmBreakdown(listingId: string): Promise<UtmBreakdown[]> {
+  const rows = await sql`
+    select coalesce(nullif(utm_source, ''), '(direct)') as source,
+           coalesce(nullif(utm_medium, ''), '') as medium,
+           coalesce(nullif(utm_campaign, ''), '') as campaign,
+           count(*)::int as count
+    from clicks
+    where listing_id = ${listingId}
+    group by 1, 2, 3
+    order by count desc
+    limit 20
+  `;
+  const total = rows.reduce(
+    (s, r) => s + Number((r as Record<string, unknown>).count || 0),
+    0
+  );
+  const base = total > 0 ? total : 1;
+  return rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    const count = Number(row.count || 0);
+    return {
+      source: String(row.source),
+      medium: String(row.medium ?? ""),
+      campaign: String(row.campaign ?? ""),
+      count,
+      percentage: Math.round((count / base) * 100),
+    };
+  });
 }
 
 export async function getClicksByDay(
@@ -710,8 +760,7 @@ export async function consumeCoupon(code: string): Promise<boolean> {
 }
 
 // Strict anti-abuse: has this email already redeemed ANY coupon?
-export async function hasEmailUsedCoupon(email: string): Promise<boolean> {
-  const normalized = String(email || "").trim().toLowerCase();
+export async function hasEmailUsedCoupon(email: string): Promise<boolean> {  const normalized = String(email || "").trim().toLowerCase();
   if (!normalized || !normalized.includes("@")) return false;
   const rows = await sql`
     select p.id
@@ -738,4 +787,12 @@ export async function hasDomainUsedCoupon(normalizedUrl: string): Promise<boolea
     limit 1
   `;
   return rows.length > 0;
+}
+
+// Launch promo: how many confirmed listings exist (founding-free slots).
+export async function getConfirmedListingCount(): Promise<number> {
+  const rows = await sql`
+    select count(*)::int as n from listings where status = 'confirmed'
+  `;
+  return Number((rows[0] as Record<string, unknown>).n);
 }

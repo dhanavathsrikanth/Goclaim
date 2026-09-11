@@ -6,6 +6,7 @@ import type {
   Payment,
   DayClickCount,
   ReferralSourceBreakdown,
+  UtmBreakdown,
   RoiMetrics,
 } from "@/lib/types";
 import RoiCalculatorCard from "../components/RoiCalculatorCard";
@@ -17,6 +18,7 @@ type DashboardItem = {
   ranks: Record<string, number | null>;
   clicks_by_day: DayClickCount[];
   referral_breakdown: ReferralSourceBreakdown[];
+  utm_breakdown: UtmBreakdown[];
   roi?: RoiMetrics;
   payments: Payment[];
   ad_live: boolean;
@@ -28,6 +30,20 @@ const BOARD_LABELS: Record<string, string> = {
   today: "Today",
   daily: "Daily",
 };
+
+function RankChip({ label, value }: { label: string; value: number | null }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+        value === 1
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          : "border-border bg-muted/60 text-muted-foreground"
+      }`}
+    >
+      {label} {value ? `#${value}` : "—"}
+    </span>
+  );
+}
 
 function CreativeForm({
   listing,
@@ -248,9 +264,9 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="flex-1 w-full pt-12 pb-20 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 w-full pt-8 sm:pt-12 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-foreground mb-1">Your dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">Your dashboard</h1>
           <p className="text-sm text-muted-foreground mb-8">{email}</p>
 
           {items.length === 0 ? (
@@ -259,88 +275,57 @@ export default function Dashboard() {
             <div className="space-y-4">
               {items.map((item) => {
                 const l = item.listing;
-                const totalClicks = item.clicks_by_day.reduce(
-                  (s, d) => s + d.clicks,
-                  0
-                );
                 return (
                   <div
                     key={l.id}
-                    className="rounded-xl bg-card border border-border p-5"
+                    className="rounded-xl bg-card border border-border p-4 sm:p-5"
                   >
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                    {/* Header: identity + rank + action */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="text-lg font-semibold text-foreground truncate">
-                          {l.product_name || l.url}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-base sm:text-lg font-semibold text-foreground truncate">
+                            {l.product_name || l.url}
+                          </p>
+                          {l.claimed_free ? (
+                            <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-bold text-emerald-600 shrink-0">
+                              FREE
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold text-foreground tabular-nums text-sm sm:text-base shrink-0">
+                              ${l.total_bid.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          <a
+                            href={`/api/go/${l.id}?from=dashboard`}
+                            target="_blank"
+                            rel="sponsored noopener noreferrer"
+                            className="hover:text-primary hover:underline"
+                            title="Test your live tracked link"
+                          >
+                            {l.url}
+                          </a>{" "}
+                          · {l.category}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {l.url} · {l.category} · {l.status}
-                        </p>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          <RankChip label="All" value={item.ranks["all-time"]} />
+                          <RankChip label="24h" value={item.ranks["today"]} />
+                          <RankChip label="Daily" value={item.ranks["daily"]} />
+                          {item.ad_live && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                              👑 Ad LIVE till 00:00 UTC
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-bold text-foreground tabular-nums">
-                          ${l.total_bid.toLocaleString()}
-                        </p>
-                        <Link
-                          href={`/?raise=${l.id}`}
-                          className="inline-block mt-1 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/80 transition-colors"
-                        >
-                          Raise bid
-                        </Link>
-                      </div>
-                    </div>
-
-                    {/* Quick Metrics Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Total Clicks</p>
-                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">{l.click_count.toLocaleString()}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{totalClicks} in 30d window</p>
-                      </div>
-
-                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Effective CPC</p>
-                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
-                          {l.click_count > 0 ? `$${(l.total_bid / l.click_count).toFixed(2)}` : "—"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">per tracked click</p>
-                      </div>
-
-                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ranks (All / 24h / UTC)</p>
-                        <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
-                          #{item.ranks["all-time"] ?? "—"} <span className="text-xs text-muted-foreground font-normal">/ #{item.ranks["today"] ?? "—"} / #{item.ranks["daily"] ?? "—"}</span>
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">All-Time · Today · Daily</p>
-                      </div>
-
-                      <div className="rounded-lg bg-muted/40 border border-border/60 p-3">
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Destination</p>
-                        <a
-                          href={`/api/go/${l.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-semibold text-primary hover:underline truncate block mt-1"
-                          title="Test your live tracked redirect link"
-                        >
-                          {l.url.includes("x.com") || l.url.includes("twitter.com") || l.url.startsWith("@")
-                            ? `𝕏 @${l.url.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "").replace(/^@/, "").replace(/\/+$/, "")}`
-                            : l.url.replace(/^https?:\/\//, "").replace(/\/+$/, "")} ↗
-                        </a>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">verified redirect</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-xs flex items-center gap-2">
-                      {item.ad_live ? (
-                        <span className="text-amber-400 font-semibold flex items-center gap-1">
-                          👑 Sponsor slot LIVE on homepage until 00:00 UTC
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          👑 Homepage Sponsor slot: outbid #1 before midnight UTC to take the crown.
-                        </span>
-                      )}
+                      <Link
+                        href={`/?raise=${l.id}`}
+                        className="inline-block text-center shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/80 transition-colors w-full sm:w-auto"
+                      >
+                        Raise bid
+                      </Link>
                     </div>
 
                     {/* Private Analytics & ROI Calculator Section */}
@@ -348,7 +333,7 @@ export default function Dashboard() {
                       <RoiCalculatorCard
                         listingId={l.id}
                         productName={l.product_name || l.url}
-                        totalBid={l.total_bid}
+                        totalBid={l.claimed_free ? 0 : l.total_bid}
                         clickCount={l.click_count}
                         initialRoi={item.roi}
                       />
@@ -358,6 +343,8 @@ export default function Dashboard() {
                         <ReferralBreakdownCard
                           breakdown={item.referral_breakdown}
                           totalClicks={l.click_count}
+                          utm={item.utm_breakdown || []}
+                          listingSlug={l.slug || l.id}
                         />
                       </div>
                     </div>
@@ -376,7 +363,13 @@ export default function Dashboard() {
                               className="flex justify-between text-xs text-muted-foreground"
                             >
                               <span className="tabular-nums">
-                                ${p.amount} · {p.status}
+                                {p.coupon_code ? (
+                                  <span className="font-bold text-emerald-600">FREE</span>
+                                ) : (
+                                  <>${p.amount}</>
+                                )}{" "}
+                                · {p.status}
+                                {p.coupon_code ? ` · ${p.coupon_code}` : ""}
                               </span>
                               <span className="tabular-nums">
                                 {new Date(p.created_at).toLocaleDateString()}
@@ -387,11 +380,16 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    <CreativeForm
-                      listing={l}
-                      claim={claim}
-                      onSaved={() => load(claim)}
-                    />
+                    <details className="mt-4 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                      <summary className="cursor-pointer text-xs font-bold text-foreground select-none">
+                        ✨ Listing enhancements <span className="font-normal text-muted-foreground">— logo, demo, promo code, founder note</span>
+                      </summary>
+                      <CreativeForm
+                        listing={l}
+                        claim={claim}
+                        onSaved={() => load(claim)}
+                      />
+                    </details>
                   </div>
                 );
               })}

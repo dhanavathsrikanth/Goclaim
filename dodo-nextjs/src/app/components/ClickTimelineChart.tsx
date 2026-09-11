@@ -40,7 +40,7 @@ export default function ClickTimelineChart({ data }: Props) {
   const activeItem = hoveredIndex !== null && days30[hoveredIndex] ? days30[hoveredIndex] : null;
 
   return (
-    <div className="rounded-xl bg-card border border-border p-5 shadow-xs">
+    <div className="rounded-xl bg-card border border-border p-4 sm:p-5 shadow-xs">
       {/* Header & Stats Bar */}
       <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-border/60">
         <div>
@@ -108,7 +108,7 @@ export default function ClickTimelineChart({ data }: Props) {
           </div>
         ) : (
           <span className="text-[11px] text-muted-foreground italic">
-            Hover over any daily bar to inspect exact traffic numbers.
+            Tap or hover any daily bar to inspect exact traffic numbers.
           </span>
         )}
       </div>
@@ -140,6 +140,7 @@ export default function ClickTimelineChart({ data }: Props) {
                   key={d.day}
                   onMouseEnter={() => setHoveredIndex(idx)}
                   onMouseLeave={() => setHoveredIndex(null)}
+                  onClick={() => setHoveredIndex(hoveredIndex === idx ? null : idx)}
                   className="flex-1 flex flex-col justify-end h-full group relative cursor-pointer"
                 >
                   <div

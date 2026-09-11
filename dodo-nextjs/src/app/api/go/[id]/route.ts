@@ -22,9 +22,25 @@ export async function GET(
   // Extract referral source from URL search param or referer header
   const reqUrl = new URL(_req.url);
   let source = reqUrl.searchParams.get("from")?.trim() || "";
+  const referer = _req.headers.get("referer") || "";
+
+  // UTM attribution: explicit params win, else inherit from the
+  // referring page URL (buyer shares /listings/slug?utm_source=x...).
+  let utmSource = reqUrl.searchParams.get("utm_source")?.trim() || "";
+  let utmMedium = reqUrl.searchParams.get("utm_medium")?.trim() || "";
+  let utmCampaign = reqUrl.searchParams.get("utm_campaign")?.trim() || "";
+  if ((!utmSource && !utmMedium && !utmCampaign) && referer) {
+    try {
+      const refParams = new URL(referer).searchParams;
+      utmSource = refParams.get("utm_source")?.trim() || "";
+      utmMedium = refParams.get("utm_medium")?.trim() || "";
+      utmCampaign = refParams.get("utm_campaign")?.trim() || "";
+    } catch {
+      // non-URL referer — ignore
+    }
+  }
 
   if (!source) {
-    const referer = _req.headers.get("referer") || "";
     if (referer.includes("/listings/")) {
       source = "listing_page";
     } else if (referer.includes("board=today")) {
@@ -48,7 +64,11 @@ export async function GET(
     }
   }
 
-  await recordClick(id, source);
+  await recordClick(id, source, {
+    source: utmSource,
+    medium: utmMedium,
+    campaign: utmCampaign,
+  });
 
   // 1. If it is an X (Twitter) profile or handle, format strictly as https://x.com/{handle}
   // (X rejects URLs with '@' in path like x.com/@user with 403 Forbidden)

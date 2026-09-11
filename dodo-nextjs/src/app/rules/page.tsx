@@ -56,9 +56,10 @@ export default function RulesPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Free coupon codes</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Free listings</h2>
             <ul className="space-y-2 list-disc list-inside text-foreground/80">
-              <li>Promo codes (e.g. EARLY100) cover a $2 starter listing — $0 due, $2 rank value.</li>
+              <li><strong>Launch offer:</strong> the first 20 confirmed listings are FREE — no code needed, just an email. $0 due, $2 rank value.</li>
+              <li>Promo codes (e.g. EARLY100) cover a $2 starter listing after the launch slots run out.</li>
               <li>1 free claim per domain/handle · 1 per email · new listings only. Free listings can be outranked by any paid bid.</li>
               <li>Codes have limited uses and an expiry date. Abuse (duplicates, disposable-email farming, scripting) gets listings removed.</li>
             </ul>

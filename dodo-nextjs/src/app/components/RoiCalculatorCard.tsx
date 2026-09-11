@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { RoiMetrics } from "@/lib/types";
 
 type Props = {
@@ -33,9 +32,8 @@ export default function RoiCalculatorCard({
   initialRoi,
 }: Props) {
   const [selectedBenchmark, setSelectedBenchmark] = useState<AdBenchmark>(BENCHMARKS[0]);
-  const [simulatedExtraBid, setSimulatedExtraBid] = useState<number>(0);
 
-  // Current Metrics
+  // Current Metrics (totalBid is 0 for FREE listings → pure value story)
   const effectiveCpc =
     clickCount > 0 && totalBid > 0 ? Number((totalBid / clickCount).toFixed(2)) : 0;
   const benchmarkCpc = selectedBenchmark.cpc;
@@ -47,24 +45,8 @@ export default function RoiCalculatorCard({
   const roiMultiple =
     totalBid > 0 ? Number((estimatedMarketValue / totalBid).toFixed(1)) : 0;
 
-  // Simulated Metrics
-  const simulatedTotalBid = totalBid + simulatedExtraBid;
-  const simulatedClicks =
-    clickCount > 0 && totalBid > 0
-      ? Math.round(clickCount * (1 + (simulatedExtraBid / totalBid) * 1.15))
-      : simulatedExtraBid > 0
-      ? Math.round(simulatedExtraBid / 0.25)
-      : 0;
-  const simulatedCpc =
-    simulatedClicks > 0 ? Number((simulatedTotalBid / simulatedClicks).toFixed(2)) : effectiveCpc;
-  const simulatedMarketValue = Number((simulatedClicks * benchmarkCpc).toFixed(2));
-  const simulatedSavingsPct =
-    simulatedCpc > 0 && simulatedCpc < benchmarkCpc
-      ? Math.round((1 - simulatedCpc / benchmarkCpc) * 100)
-      : 0;
-
   return (
-    <div className="rounded-xl bg-card border border-border p-5 shadow-xs transition-all">
+    <div className="rounded-xl bg-card border border-border p-4 sm:p-5 shadow-xs transition-all">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 pb-4 border-b border-border/60">
         <div>
@@ -112,7 +94,14 @@ export default function RoiCalculatorCard({
               Efficiency Statement
             </p>
             <p className="text-sm sm:text-base font-semibold text-emerald-200 mt-1 leading-snug">
-              {clickCount > 0 && totalBid > 0 ? (
+              {totalBid === 0 && clickCount > 0 ? (
+                <>
+                  You paid <strong className="text-white">$0</strong> and
+                  received <strong className="text-white">{clickCount.toLocaleString()} clicks</strong>{" "}
+                  — worth <strong className="text-white">${estimatedMarketValue.toLocaleString()}</strong> on{" "}
+                  {selectedBenchmark.platform}.
+                </>
+              ) : clickCount > 0 && totalBid > 0 ? (
                 <>
                   You bid <strong className="text-white">${totalBid.toLocaleString()}</strong> and
                   received <strong className="text-white">{clickCount.toLocaleString()} clicks</strong>.
@@ -209,73 +198,6 @@ export default function RoiCalculatorCard({
             return on ${totalBid.toLocaleString()} bid
           </p>
         </div>
-      </div>
-
-      {/* Interactive "What-If" Bid & Traffic Simulator */}
-      <div className="mt-5 p-4 rounded-xl bg-muted/30 border border-border/60">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs">🧪</span>
-            <span className="text-xs font-bold text-foreground">
-              Interactive ROI &amp; Traffic Simulator
-            </span>
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            Preview traffic growth if you raise your bid
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap mb-3">
-          <span className="text-xs text-muted-foreground">Simulate Bid Increase:</span>
-          {[10, 25, 50, 100].map((amt) => (
-            <button
-              key={amt}
-              type="button"
-              onClick={() => setSimulatedExtraBid(amt === simulatedExtraBid ? 0 : amt)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                simulatedExtraBid === amt
-                  ? "bg-primary text-primary-foreground shadow-2xs"
-                  : "bg-muted hover:bg-muted/80 text-foreground border border-border"
-              }`}
-            >
-              +${amt}
-            </button>
-          ))}
-          {simulatedExtraBid > 0 && (
-            <button
-              type="button"
-              onClick={() => setSimulatedExtraBid(0)}
-              className="text-xs text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-
-        {simulatedExtraBid > 0 ? (
-          <div className="p-3 rounded-lg bg-card border border-primary/30 flex items-center justify-between flex-wrap gap-3">
-            <div className="text-xs space-y-0.5">
-              <p className="font-semibold text-foreground">
-                With a <strong className="text-primary">+${simulatedExtraBid}</strong> increase (total ${simulatedTotalBid}):
-              </p>
-              <p className="text-muted-foreground text-[11px]">
-                Projected ~<strong className="text-emerald-400">{simulatedClicks} clicks</strong> (~+
-                {simulatedClicks - clickCount} new visitors) at effective CPC of{" "}
-                <strong className="text-foreground">${simulatedCpc.toFixed(2)}</strong> ({simulatedSavingsPct}% cheaper than {selectedBenchmark.platform}).
-              </p>
-            </div>
-            <Link
-              href={`/?raise=${listingId}`}
-              className="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-all shadow-xs shrink-0"
-            >
-              Raise Bid +${simulatedExtraBid} ↗
-            </Link>
-          </div>
-        ) : (
-          <p className="text-[11px] text-muted-foreground italic">
-            Click any amount above (+ $10, + $25, + $50, + $100) to project clicks and CPC efficiency at higher bidding tiers.
-          </p>
-        )}
       </div>
     </div>
   );

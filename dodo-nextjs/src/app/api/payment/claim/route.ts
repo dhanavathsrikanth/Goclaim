@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         const previousTotalBid = listing.total_bid;
         listing.total_bid += payment.amount;
         listing.status = "confirmed";
+        if (!payment.coupon_code) listing.claimed_free = false;
         listing.updated_at = new Date().toISOString();
         if (!listing.claim_email) {
           listing.claim_email = "test@example.com";

@@ -71,10 +71,18 @@ export default function ListingDetail({ listing, rank, related }: Props) {
               <p className="text-xs font-medium text-muted-foreground mt-0.5">Rank</p>
             </div>
             <div className="bg-muted/30 border border-border/60 rounded-xl p-3 sm:p-4 text-center min-w-0">
-              <p className="text-lg sm:text-3xl font-bold tracking-tight text-foreground break-all tabular-nums">
-                ${listing.total_bid.toLocaleString()}
+              {listing.claimed_free ? (
+                <p className="text-lg sm:text-3xl font-bold tracking-tight text-emerald-600 break-all">
+                  FREE
+                </p>
+              ) : (
+                <p className="text-lg sm:text-3xl font-bold tracking-tight text-foreground break-all tabular-nums">
+                  ${listing.total_bid.toLocaleString()}
+                </p>
+              )}
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                {listing.claimed_free ? "Free Listing" : "Total Bid"}
               </p>
-              <p className="text-xs font-medium text-muted-foreground mt-0.5">Total Bid</p>
             </div>
             <div className="bg-muted/30 border border-border/60 rounded-xl p-3 sm:p-4 text-center min-w-0">
               <p className="text-lg sm:text-3xl font-bold tracking-tight text-foreground break-all tabular-nums">

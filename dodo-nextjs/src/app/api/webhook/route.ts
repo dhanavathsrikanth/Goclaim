@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
       const previousTotalBid = listing.total_bid;
       listing.total_bid += payment.amount;
       listing.status = "confirmed";
+      // A real paid bid converts a FREE listing into a paid one.
+      if (!payment.coupon_code) listing.claimed_free = false;
       listing.updated_at = new Date().toISOString();
       const customer =
         payload.customer as Record<string, unknown> | undefined;

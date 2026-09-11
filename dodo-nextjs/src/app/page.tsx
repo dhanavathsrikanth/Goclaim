@@ -7,6 +7,7 @@ import LeaderboardSponsorRow from "./components/LeaderboardSponsorRow";
 import BoardSwitcher from "./components/BoardSwitcher";
 import CategoryFilter from "./components/CategoryFilter";
 import LogoWall from "./components/LogoWall";
+import PromoBanner from "./components/PromoBanner";
 import MilestoneStrip from "./components/MilestoneStrip";
 import ActivityFeed from "./components/ActivityFeed";
 import CategoryIcon from "./components/CategoryIcon";
@@ -199,6 +200,7 @@ export default function Home() {
 
 
       {/* 1. Hero Claim Form & Heading at the very top */}
+      <PromoBanner />
       <div className="mt-4 sm:mt-6">
         <BidForm
           key={prefill ? `raise-${prefill.url}` : "default"}

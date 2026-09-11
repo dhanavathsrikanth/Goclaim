@@ -12,6 +12,126 @@ export interface OutbidAlertParams {
   category: string;
 }
 
+// ---------------------------------------------------------------------------
+// Shared email primitives
+// ---------------------------------------------------------------------------
+
+function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const EMAIL_FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+function emailDocument(opts: {
+  title: string;
+  preheader: string;
+  bodyHtml: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${escapeHtml(opts.title)}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-card { border-radius: 12px !important; }
+      .email-pad { padding-left: 20px !important; padding-right: 20px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .stack-pad { padding-top: 12px !important; }
+      .cta { padding: 16px 20px !important; font-size: 16px !important; }
+      .hero-rank { font-size: 44px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #121110; font-family: ${EMAIL_FONT}; color: #f5f5f4; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+  <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;" aria-hidden="true">
+    ${escapeHtml(opts.preheader)}
+  </div>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="background-color: #121110; padding: 32px 15px;">
+    <tr>
+      <td align="center">
+        <table class="email-card" width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="max-width: 560px; background-color: #1c1a18; border: 1px solid #33302b; border-radius: 16px; overflow: hidden;">
+          ${opts.bodyHtml}
+        </table>
+        <div style="max-width: 560px; margin: 16px auto 0; font-size: 11px; line-height: 1.6; color: #57534e; text-align: center; font-family: ${EMAIL_FONT};">
+          GoClaim — rank is what you pay, nothing else.
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function emailEyebrow(opts: { label: string; pill?: string }): string {
+  const pill = opts.pill
+    ? `<span style="display: inline-block; font-size: 12px; color: #e8e2da; font-weight: 600; background-color: #2a2723; border: 1px solid #3a352f; border-radius: 999px; padding: 4px 12px;">${escapeHtml(opts.pill)}</span>`
+    : "";
+  return `<tr>
+    <td class="email-pad" style="padding: 24px 30px 18px; border-bottom: 1px solid #282522;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+        <tr>
+          <td align="left" style="font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #e57255; text-transform: uppercase; font-family: ${EMAIL_FONT};">
+            ${escapeHtml(opts.label)}
+          </td>
+          <td align="right">${pill}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>`;
+}
+
+function emailCta(opts: { href: string; label: string }): string {
+  return `<table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+    <tr>
+      <td align="center" style="padding-bottom: 10px;">
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${escapeHtml(opts.href)}" style="width:480px;height:52px;" arcsize="18%" fillcolor="#e57255" stroke="f">
+          <v:textbox inset="0,0,0,0"><center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">${escapeHtml(opts.label)}</center></v:textbox>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-- -->
+        <a class="cta" href="${escapeHtml(opts.href)}" target="_blank" rel="noopener" style="display: block; width: 100%; box-sizing: border-box; background-color: #e57255; color: #ffffff; font-size: 15px; font-weight: 700; text-align: center; text-decoration: none; padding: 15px 20px; border-radius: 12px;">
+          ${escapeHtml(opts.label)}
+        </a>
+        <!--<![endif]-->
+      </td>
+    </tr>
+  </table>`;
+}
+
+function emailFooter(opts: { to: string; reason: string }): string {
+  return `<tr>
+    <td class="email-pad" style="padding: 20px 30px; background-color: #161413; border-top: 1px solid #282522; text-align: center;">
+      <p style="margin: 0 0 8px; font-size: 12px; line-height: 1.6; color: #a8a29e; font-family: ${EMAIL_FONT};">
+        ${opts.reason}
+      </p>
+      <p style="margin: 0; font-size: 11px; line-height: 1.6; color: #57534e; font-family: ${EMAIL_FONT};">
+        Sent to ${escapeHtml(opts.to)} · GoClaim, real-time competitive leaderboard
+      </p>
+    </td>
+  </tr>`;
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -41,6 +161,10 @@ export async function sendEmail({
           subject,
           html,
           text,
+          reply_to: fromEmail,
+          headers: {
+            "List-Unsubscribe": `<mailto:${fromEmail}?subject=unsubscribe>`,
+          },
         }),
       });
 
@@ -79,124 +203,88 @@ export function generateOutbidHtml(params: OutbidAlertParams): string {
     category,
   } = params;
 
-  const overtakenName = overtakenTool.product_name || overtakenTool.normalized_url;
-  const outbidByName = outbidByTool.product_name || outbidByTool.normalized_url;
+  const overtakenName = escapeHtml(overtakenTool.product_name || overtakenTool.normalized_url);
+  const outbidByName = escapeHtml(outbidByTool.product_name || outbidByTool.normalized_url);
   const rankLabel = previousRank === 1 ? "#1" : `#${previousRank}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://goclaim.space";
+  const boardUrl = `${siteUrl}/`;
+  const preheader = `Reclaim ${rankLabel} for +$${differenceAmount.toLocaleString()} — 1-click checkout inside.`;
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Outbid Alert</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #121110; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f5f5f4;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #121110; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <!-- Main Card -->
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #1c1a18; border: 1px solid #33302b; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-          
-          <!-- Header Bar -->
-          <tr>
-            <td style="padding: 24px 30px 20px; border-bottom: 1px solid #282522;">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="left">
-                    <span style="font-size: 14px; font-weight: 800; letter-spacing: 1px; color: #e57255; text-transform: uppercase;">
-                      ⚡ GOCLAIM · OUTBID ALERT
-                    </span>
-                  </td>
-                  <td align="right">
-                    <span style="font-size: 12px; color: #a8a29e; font-weight: 500;">
-                      ${category}
-                    </span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+  const bodyHtml = `
+          ${emailEyebrow({ label: "⚡ Goclaim · Outbid alert", pill: category })}
 
-              <!-- Main Content -->
           <tr>
-            <td style="padding: 30px 30px 24px;">
-              <h1 style="margin: 0 0 12px; font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1.25;">
-                🚨 You just lost ${rankLabel}!
+            <td class="email-pad" style="padding: 28px 30px 24px;">
+              <div style="display: inline-block; font-size: 12px; font-weight: 700; color: #fda4af; background-color: rgba(229, 114, 85, 0.12); border: 1px solid rgba(229, 114, 85, 0.35); border-radius: 999px; padding: 5px 14px; margin-bottom: 14px; font-family: ${EMAIL_FONT};">
+                Live board · someone just passed you
+              </div>
+              <h1 style="margin: 0 0 10px; font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.25; font-family: ${EMAIL_FONT};">
+                You just lost ${escapeHtml(rankLabel)}
               </h1>
-              <p style="margin: 0 0 24px; font-size: 15px; color: #d6d3d1; line-height: 1.5;">
-                <strong style="color: #ffffff;">${outbidByName}</strong> just placed a <strong style="color: #e57255;">$${outbidByTool.total_bid.toLocaleString()}</strong> bid and passed <strong style="color: #ffffff;">${overtakenName}</strong> on the <em>${category}</em> board. Click below to reclaim ${rankLabel} for <strong style="color: #ffffff;">$${targetReclaimBid.toLocaleString()}</strong> with 1 click.
+              <p style="margin: 0 0 22px; font-size: 15px; color: #d6d3d1; line-height: 1.6; font-family: ${EMAIL_FONT};">
+                <strong style="color: #ffffff;">${outbidByName}</strong> placed a
+                <strong style="color: #e57255;">$${outbidByTool.total_bid.toLocaleString()}</strong>
+                bid and passed <strong style="color: #ffffff;">${overtakenName}</strong> on the
+                <em>${escapeHtml(category)}</em> board. Reclaim ${escapeHtml(rankLabel)} for
+                <strong style="color: #ffffff;">$${targetReclaimBid.toLocaleString()}</strong> with 1 click.
               </p>
 
-              <!-- Comparison Table -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px; margin-bottom: 24px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
                 <tr>
-                  <td style="padding: 16px; border-bottom: 1px solid #282522;" width="50%">
-                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; margin-bottom: 4px;">
-                      New Leader
+                  <td class="stack" style="padding: 16px 18px; border-bottom: 1px solid #282522;" width="50%">
+                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-family: ${EMAIL_FONT};">
+                      New leader
                     </div>
-                    <div style="font-size: 16px; font-weight: 800; color: #e57255;">
+                    <div style="font-size: 16px; font-weight: 800; color: #e57255; font-family: ${EMAIL_FONT};">
                       ${outbidByName}
                     </div>
-                    <div style="font-size: 13px; color: #a8a29e; margin-top: 2px;">
+                    <div style="font-size: 13px; color: #a8a29e; margin-top: 2px; font-family: ${EMAIL_FONT};">
                       Bid: <strong style="color: #ffffff;">$${outbidByTool.total_bid.toLocaleString()}</strong>
                     </div>
                   </td>
-                  <td style="padding: 16px; border-bottom: 1px solid #282522;" width="50%">
-                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; margin-bottom: 4px;">
-                      Your Product
+                  <td class="stack" style="padding: 16px 18px; border-bottom: 1px solid #282522;" width="50%">
+                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-family: ${EMAIL_FONT};">
+                      Your product
                     </div>
-                    <div style="font-size: 16px; font-weight: 800; color: #ffffff;">
+                    <div style="font-size: 16px; font-weight: 800; color: #ffffff; font-family: ${EMAIL_FONT};">
                       ${overtakenName}
                     </div>
-                    <div style="font-size: 13px; color: #a8a29e; margin-top: 2px;">
+                    <div style="font-size: 13px; color: #a8a29e; margin-top: 2px; font-family: ${EMAIL_FONT};">
                       Bid: <strong style="color: #ffffff;">$${overtakenTool.total_bid.toLocaleString()}</strong>
                     </div>
                   </td>
                 </tr>
                 <tr>
-                  <td colspan="2" style="padding: 14px 16px; text-align: center; background-color: rgba(229, 114, 85, 0.08);">
-                    <span style="font-size: 13px; color: #f5f5f4;">
-                      Reclaim ${rankLabel} for only <strong style="color: #e57255; font-size: 14px;">+$${differenceAmount.toLocaleString()}</strong> (New Total: $${targetReclaimBid.toLocaleString()})
+                  <td colspan="2" style="padding: 14px 18px; text-align: center; background-color: rgba(229, 114, 85, 0.10);">
+                    <span style="font-size: 13px; color: #f5f5f4; font-family: ${EMAIL_FONT};">
+                      Reclaim ${escapeHtml(rankLabel)} for only
+                      <strong style="color: #e57255; font-size: 15px;">+$${differenceAmount.toLocaleString()}</strong>
+                      <span style="color: #a8a29e;">(new total $${targetReclaimBid.toLocaleString()})</span>
                     </span>
                   </td>
                 </tr>
               </table>
 
-              <!-- 1-Click CTA Button -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center" style="padding-bottom: 12px;">
-                    <a href="${counterBidUrl}" target="_blank" style="display: block; width: 100%; box-sizing: border-box; background-color: #e57255; color: #ffffff; font-size: 15px; font-weight: 700; text-align: center; text-decoration: none; padding: 14px 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(229, 114, 85, 0.4);">
-                      ⚔️ Click here to reclaim ${rankLabel} for $${targetReclaimBid.toLocaleString()} with 1 click →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <div style="text-align: center; font-size: 11px; color: #78716c; margin-top: 4px;">
-                1-Click Counter-Bid: Link directly opens checkout with difference (+$${differenceAmount.toLocaleString()}) pre-calculated.
+              ${emailCta({ href: counterBidUrl, label: `Reclaim ${rankLabel} for $${targetReclaimBid.toLocaleString()} →` })}
+
+              <div style="text-align: center; margin-bottom: 18px;">
+                <a href="${escapeHtml(boardUrl)}" target="_blank" rel="noopener" style="font-size: 13px; font-weight: 600; color: #e57255; text-decoration: underline; font-family: ${EMAIL_FONT};">
+                  View the live board
+                </a>
+              </div>
+              <div style="text-align: center; font-size: 11px; line-height: 1.6; color: #78716c; font-family: ${EMAIL_FONT};">
+                1-click counter-bid opens secure checkout with the +$${differenceAmount.toLocaleString()} difference pre-filled. Rank is what you pay — nothing else.
               </div>
 
             </td>
           </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 20px 30px; background-color: #161413; border-top: 1px solid #282522; text-align: center;">
-              <p style="margin: 0 0 6px; font-size: 12px; color: #78716c;">
-                Rank is what you pay — nothing else. Real-time competitive leaderboard.
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #57534e;">
-                Sent to ${params.to} because this email is listed on ${overtakenName}.
-              </p>
-            </td>
-          </tr>
+          ${emailFooter({
+            to: params.to,
+            reason: `You're getting this because <strong style="color:#d6d3d1;">${overtakenName}</strong> lists this email for bid alerts. Reply to this email to contact us.`,
+          })}`;
 
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  return emailDocument({ title: "Outbid Alert", preheader, bodyHtml });
 }
 
 export function generateOutbidText(params: OutbidAlertParams): string {
@@ -214,13 +302,20 @@ export function generateOutbidText(params: OutbidAlertParams): string {
   const outbidByName = outbidByTool.product_name || outbidByTool.normalized_url;
   const rankLabel = previousRank === 1 ? "#1" : `#${previousRank}`;
 
-  return `🚨 OUTBID ALERT: You just lost ${rankLabel}!
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://goclaim.space";
 
-${outbidByName} just placed a $${outbidByTool.total_bid.toLocaleString()} bid and passed ${overtakenName} on the ${category} board. Click here to reclaim ${rankLabel} for $${targetReclaimBid.toLocaleString()} with 1 click:
+  return `OUTBID ALERT — You just lost ${rankLabel}
+
+${outbidByName} placed a $${outbidByTool.total_bid.toLocaleString()} bid and passed ${overtakenName} on the ${category} board.
+
+Reclaim ${rankLabel} for only +$${differenceAmount.toLocaleString()} (new total $${targetReclaimBid.toLocaleString()}):
 
 ${counterBidUrl}
 
-(1-Click Counter-Bid: The link directly opens checkout with the +$${differenceAmount.toLocaleString()} difference pre-calculated and pre-filled).`;
+View the live board: ${siteUrl}/
+
+The link opens secure checkout with the difference pre-filled. Rank is what you pay — nothing else.
+— GoClaim alerts`;
 }
 
 export async function sendOutbidAlert(params: OutbidAlertParams) {
@@ -257,96 +352,111 @@ export function generateListingConfirmedHtml(params: ListingConfirmedParams): st
   const dashboardUrl = `${siteUrl}/dashboard?claim=${encodeURIComponent(claimToken)}`;
   const listingUrl = `${siteUrl}/listings/${encodeURIComponent(listing.slug || listing.id)}`;
   const badgeUrl = `${siteUrl}/api/badge/${encodeURIComponent(listing.slug || listing.id)}`;
-  const name = listing.product_name || listing.normalized_url;
+  const name = escapeHtml(listing.product_name || listing.normalized_url);
+  const preheader = `You're Rank #${rank} on GoClaim — dashboard, badge and next steps inside.`;
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your listing is live on GoClaim</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #121110; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f5f5f4;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #121110; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #1c1a18; border: 1px solid #33302b; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  const steps = [
+    {
+      n: "1",
+      title: "Watch your rank live",
+      body: "Your listing is on the public board now. If someone outbids you, we'll email you instantly with a 1-click reclaim link.",
+    },
+    {
+      n: "2",
+      title: "Use your founder dashboard",
+      body: "Bookmark your private link — traffic trends, CPC savings and listing settings live there.",
+    },
+    {
+      n: "3",
+      title: "Show off your badge",
+      body: "Embed your live rank badge on your README or site. It updates automatically.",
+    },
+  ]
+    .map(
+      (s) => `<table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-bottom: 10px;">
+        <tr>
+          <td width="32" valign="top" style="padding-right: 12px;">
+            <div style="width: 28px; height: 28px; border-radius: 999px; background-color: rgba(229, 114, 85, 0.14); border: 1px solid rgba(229, 114, 85, 0.4); color: #e57255; font-size: 14px; font-weight: 800; text-align: center; line-height: 28px; font-family: ${EMAIL_FONT};">${s.n}</div>
+          </td>
+          <td valign="top">
+            <div style="font-size: 14px; font-weight: 700; color: #ffffff; font-family: ${EMAIL_FONT};">${s.title}</div>
+            <div style="font-size: 13px; line-height: 1.6; color: #a8a29e; font-family: ${EMAIL_FONT};">${s.body}</div>
+          </td>
+        </tr>
+      </table>`
+    )
+    .join("");
+
+  const bodyHtml = `
+          ${emailEyebrow({ label: "🎉 Goclaim · Listing confirmed", pill: category })}
+
           <tr>
-            <td style="padding: 24px 30px 20px; border-bottom: 1px solid #282522;">
-              <span style="font-size: 14px; font-weight: 800; letter-spacing: 1px; color: #e57255; text-transform: uppercase;">
-                🎉 GOCLAIM · LISTING CONFIRMED
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 30px 30px 24px;">
-              <h1 style="margin: 0 0 12px; font-size: 24px; font-weight: 800; color: #ffffff;">
-                You are Rank #${rank}!
+            <td class="email-pad" style="padding: 28px 30px 24px;">
+              <div style="text-align: center; margin-bottom: 16px;">
+                <div class="hero-rank" style="font-size: 52px; font-weight: 800; color: #e57255; line-height: 1; font-family: ${EMAIL_FONT};">#${rank}</div>
+                <div style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #a8a29e; margin-top: 6px; font-family: ${EMAIL_FONT};">Current rank · ${escapeHtml(category)}</div>
+              </div>
+              <h1 style="margin: 0 0 10px; font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1.3; text-align: center; font-family: ${EMAIL_FONT};">
+                ${name} is live on GoClaim
               </h1>
-              <p style="margin: 0 0 20px; font-size: 15px; color: #d6d3d1; line-height: 1.5;">
-                Your bid of <strong style="color: #e57255;">$${paidAmount.toLocaleString()}</strong> for <strong style="color: #ffffff;">${name}</strong> has been confirmed. Your current total bid is <strong style="color: #ffffff;">$${totalBid.toLocaleString()}</strong> on the <em>${category}</em> board.
+              <p style="margin: 0 0 22px; font-size: 15px; color: #d6d3d1; line-height: 1.6; text-align: center; font-family: ${EMAIL_FONT};">
+                Your bid of <strong style="color: #e57255;">$${paidAmount.toLocaleString()}</strong> is confirmed.
+                Total bid <strong style="color: #ffffff;">$${totalBid.toLocaleString()}</strong>.
               </p>
 
-              <!-- Stats Table -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px; margin-bottom: 24px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
                 <tr>
-                  <td style="padding: 14px 16px; border-bottom: 1px solid #282522;" width="33%">
-                    <div style="font-size: 11px; color: #a8a29e; text-transform: uppercase;">Rank</div>
-                    <div style="font-size: 20px; font-weight: 800; color: #e57255;">#${rank}</div>
+                  <td class="stack" align="center" style="padding: 14px 12px; border-bottom: 1px solid #282522;" width="33%">
+                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.8px; font-family: ${EMAIL_FONT};">Rank</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #e57255; font-family: ${EMAIL_FONT};">#${rank}</div>
                   </td>
-                  <td style="padding: 14px 16px; border-bottom: 1px solid #282522;" width="33%">
-                    <div style="font-size: 11px; color: #a8a29e; text-transform: uppercase;">Total Bid</div>
-                    <div style="font-size: 20px; font-weight: 800; color: #ffffff;">$${totalBid.toLocaleString()}</div>
+                  <td class="stack" align="center" style="padding: 14px 12px; border-bottom: 1px solid #282522;" width="33%">
+                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.8px; font-family: ${EMAIL_FONT};">Total bid</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #ffffff; font-family: ${EMAIL_FONT};">$${totalBid.toLocaleString()}</div>
                   </td>
-                  <td style="padding: 14px 16px; border-bottom: 1px solid #282522;" width="33%">
-                    <div style="font-size: 11px; color: #a8a29e; text-transform: uppercase;">Category</div>
-                    <div style="font-size: 16px; font-weight: 700; color: #ffffff;">${category}</div>
+                  <td class="stack stack-pad" align="center" style="padding: 14px 12px;" width="33%">
+                    <div style="font-size: 11px; font-weight: 700; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.8px; font-family: ${EMAIL_FONT};">Board</div>
+                    <div style="font-size: 15px; font-weight: 700; color: #ffffff; font-family: ${EMAIL_FONT};">${escapeHtml(category)}</div>
                   </td>
                 </tr>
               </table>
 
-              <!-- Magic Link Button -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center" style="padding-bottom: 12px;">
-                    <a href="${dashboardUrl}" target="_blank" style="display: block; width: 100%; box-sizing: border-box; background-color: #e57255; color: #ffffff; font-size: 15px; font-weight: 700; text-align: center; text-decoration: none; padding: 14px 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(229, 114, 85, 0.4);">
-                      📊 Open Private Founder Dashboard →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <div style="text-align: center; font-size: 11px; color: #78716c; margin-bottom: 20px;">
-                Bookmark this email to always access your live traffic trends, ROI calculator, and listing settings.
+              ${emailCta({ href: dashboardUrl, label: "Open private founder dashboard →" })}
+
+              <div style="text-align: center; margin-bottom: 22px;">
+                <a href="${escapeHtml(listingUrl)}" target="_blank" rel="noopener" style="font-size: 13px; font-weight: 600; color: #e57255; text-decoration: underline; font-family: ${EMAIL_FONT};">
+                  View your live listing
+                </a>
               </div>
 
-              <!-- Embed Badge Snippet -->
-              <div style="padding: 16px; background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px;">
-                <div style="font-size: 12px; font-weight: 700; color: #ffffff; margin-bottom: 6px;">
-                  🏷️ Embed Your Live Rank Badge
+              <div style="margin-bottom: 6px; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #e57255; font-family: ${EMAIL_FONT};">
+                What happens next
+              </div>
+              <div style="margin-bottom: 20px;">${steps}</div>
+
+              <div style="padding: 16px 18px; background-color: #141312; border: 1px solid #2e2b26; border-radius: 12px;">
+                <div style="font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 6px; font-family: ${EMAIL_FONT};">
+                  Embed your live rank badge
                 </div>
-                <p style="margin: 0 0 8px; font-size: 12px; color: #a8a29e;">
-                  Show off your live ranking on your GitHub README or website:
+                <p style="margin: 0 0 10px; font-size: 12px; line-height: 1.6; color: #a8a29e; font-family: ${EMAIL_FONT};">
+                  Paste this markdown in your GitHub README or site — it updates automatically:
                 </p>
-                <div style="background-color: #0c0b0a; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; color: #e57255; word-break: break-all;">
-                  [![GoClaim Rank](${badgeUrl})](${listingUrl})
+                <div style="background-color: #0c0b0a; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; line-height: 1.6; color: #e57255; word-break: break-all;">
+                  [![GoClaim Rank](${escapeHtml(badgeUrl)})](${escapeHtml(listingUrl)})
                 </div>
+              </div>
+              <div style="text-align: center; font-size: 11px; line-height: 1.6; color: #78716c; margin-top: 12px; font-family: ${EMAIL_FONT};">
+                Bookmark this email — your dashboard link is the only way back to private stats and settings.
               </div>
 
             </td>
           </tr>
-          <tr>
-            <td style="padding: 20px 30px; background-color: #161413; border-top: 1px solid #282522; text-align: center;">
-              <p style="margin: 0; font-size: 11px; color: #78716c;">
-                GoClaim — Real-time competitive leaderboard directory.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+          ${emailFooter({
+            to: params.to,
+            reason: `You're getting this because this email was used to claim <strong style="color:#d6d3d1;">${name}</strong> on GoClaim. Reply to this email to contact us.`,
+          })}`;
+
+  return emailDocument({ title: "Your listing is live on GoClaim", preheader, bodyHtml });
 }
 
 export function generateListingConfirmedText(params: ListingConfirmedParams): string {
@@ -355,17 +465,25 @@ export function generateListingConfirmedText(params: ListingConfirmedParams): st
   const dashboardUrl = `${siteUrl}/dashboard?claim=${encodeURIComponent(claimToken)}`;
   const name = listing.product_name || listing.normalized_url;
 
-  return `🎉 YOUR LISTING IS LIVE ON GOCLAIM!
+  const listingUrl = `${siteUrl}/listings/${encodeURIComponent(listing.slug || listing.id)}`;
 
-Your bid of $${paidAmount.toLocaleString()} for ${name} has been confirmed.
-Current Rank: #${rank}
-Total Bid: $${totalBid.toLocaleString()}
-Category: ${category}
+  return `YOUR LISTING IS LIVE — Rank #${rank} on GoClaim
 
-Access your Private Founder Dashboard:
+Your bid of $${paidAmount.toLocaleString()} for ${name} is confirmed.
+Rank: #${rank} | Total bid: $${totalBid.toLocaleString()} | Board: ${category}
+
+Private founder dashboard (bookmark this — it's the only way back):
 ${dashboardUrl}
 
-(Bookmark the link above to view your traffic stats, CPC savings, and referral sources anytime.)`;
+View your live listing:
+${listingUrl}
+
+What happens next:
+1. If someone outbids you, we email you instantly with a 1-click reclaim link.
+2. Track traffic trends and CPC savings in your dashboard.
+3. Embed your live rank badge on your README or site.
+
+— GoClaim alerts`;
 }
 
 export async function sendListingConfirmedEmail(params: ListingConfirmedParams) {

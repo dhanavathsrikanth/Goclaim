@@ -49,6 +49,30 @@ export default function BidForm({
     uses_left: number;
     max_uses: number;
   } | null>(null);
+  const [promo, setPromo] = useState<{
+    foundingSlots: number;
+    foundingLimit: number;
+  } | null>(null);
+
+  const fetchPromo = async () => {
+    try {
+      const res = await fetch("/api/coupon");
+      const data = await res.json();
+      if (data?.founding) {
+        setPromo({
+          foundingSlots: data.founding.slots_left ?? 0,
+          foundingLimit: data.founding.limit ?? 20,
+        });
+      }
+    } catch {
+      // ignore — paid flow still works
+    }
+  };
+
+  // Launch promo status (founding-free slots) for banner + form mode.
+  useEffect(() => {
+    fetchPromo();
+  }, []);
 
   // Live scarcity lookup: debounce while typing the code.
   useEffect(() => {
@@ -92,7 +116,9 @@ export default function BidForm({
   const minBid = 2;
   const topBidPlus5 = topBid + 5;
   const couponCode = coupon.trim().toUpperCase();
-  const isFreeClaim = showCoupon && couponCode.length > 0;
+  // Founding window: first N listings free, no code. After that, code only.
+  const foundingActive = (promo?.foundingSlots ?? 0) > 0;
+  const isFreeClaim = foundingActive || (showCoupon && couponCode.length > 0);
 
   const activeTarget = selectedTarget || hoveredTarget || null;
   const targetRank = activeTarget ? activeTarget.rank : 1;
@@ -178,7 +204,12 @@ export default function BidForm({
           amount: targetPrice,
           category: category === "All" ? "Other" : category,
           ...(isFreeClaim
-            ? { coupon: couponCode, email: email.trim().toLowerCase() }
+            ? {
+                email: email.trim().toLowerCase(),
+                ...(foundingActive && !couponCode
+                  ? { free_founding: true }
+                  : { coupon: couponCode }),
+              }
             : {}),
         }),
       });
@@ -190,7 +221,7 @@ export default function BidForm({
         return;
       }
 
-      // Free coupon claim → no redirect. Show share popup instantly.
+      // Free claim → no redirect. Show share popup instantly.
       if (data.free_claim) {
         setModalOpen(false);
         setShareInfo({
@@ -202,6 +233,7 @@ export default function BidForm({
         setCoupon("");
         setEmail("");
         setShowCoupon(false);
+        fetchPromo();
         onBidSubmitted?.();
         return;
       }
@@ -253,7 +285,7 @@ export default function BidForm({
       )}
 
       <form onSubmit={handleSubmit} className="mx-auto mt-3 flex w-full max-w-4xl flex-col gap-3">
-        <div className="mx-auto flex w-[90%] flex-col gap-2.5 md:w-full md:flex-row md:gap-3">
+        <div className="flex w-full flex-col gap-2.5 md:flex-row md:gap-3">
           <div className="relative flex-1">
             <div className="pointer-events-none absolute left-3 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
               {liveFaviconUrl ? (
@@ -357,8 +389,29 @@ export default function BidForm({
 
         {error && <p className="mx-auto text-sm text-red-600">{error}</p>}
 
-        <div className="mx-auto w-[90%] md:w-full max-w-4xl">
-          {!showCoupon ? (
+        <div className="w-full">
+          {foundingActive ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
+              <p className="text-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                🎉 Launch offer: the first {promo?.foundingLimit ?? 20} listings are FREE
+                {promo ? ` — ${promo.foundingSlots} left, no code needed` : ""}
+              </p>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email for your free listing"
+                aria-label="Email for free listing"
+                className="mt-2.5 h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
+              />
+              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                1 free per domain · 1 per email · $2 starter rank ·{" "}
+                <a href="/rules" target="_blank" className="underline underline-offset-2 hover:text-foreground">
+                  details in Rules
+                </a>
+              </p>
+            </div>
+          ) : !showCoupon ? (
             <button
               type="button"
               onClick={() => setShowCoupon(true)}
@@ -368,14 +421,14 @@ export default function BidForm({
             </button>
           ) : (
             <div className="flex flex-col gap-1.5">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex flex-col gap-2 sm:flex-row">
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 grid grid-cols-1 gap-2 sm:grid-cols-[170px_1fr_auto] sm:items-center">
                 <input
                   type="text"
                   value={coupon}
                   onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                  placeholder="Coupon code (e.g. EARLY100)"
+                  placeholder="Code (e.g. EARLY100)"
                   aria-label="Coupon code"
-                  className="h-10 flex-1 rounded-lg border border-input bg-white px-3 font-mono text-sm uppercase tracking-wider placeholder:normal-case placeholder:font-sans placeholder:tracking-normal focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
+                  className="h-11 w-full rounded-xl border border-input bg-white px-3.5 font-mono text-sm uppercase tracking-wider placeholder:normal-case placeholder:font-sans placeholder:tracking-normal focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
                 />
                 <input
                   type="email"
@@ -383,7 +436,7 @@ export default function BidForm({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email for free claim"
                   aria-label="Email for free claim"
-                  className="h-10 flex-1 rounded-lg border border-input bg-white px-3 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
+                  className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
                 />
                 <button
                   type="button"
@@ -391,7 +444,7 @@ export default function BidForm({
                     setShowCoupon(false);
                     setCoupon("");
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer shrink-0 px-1"
+                  className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer sm:px-1 justify-self-end"
                 >
                   Remove
                 </button>
@@ -414,7 +467,9 @@ export default function BidForm({
         </div>
 
         <p className="mx-auto text-center text-xs text-muted-foreground">
-          {isFreeClaim
+          {foundingActive
+            ? "Free launch slots give a $2 starter rank. Paid bids outrank free anytime."
+            : isFreeClaim
             ? "Free code covers a $2 starter rank. 1 per domain · 1 per email · new listings only."
             : activeTarget && activeTarget.rank > 1
             ? `Outbidding ${activeTarget.name} to take spot #${activeTarget.rank}. Fixed at $${targetPrice.toLocaleString()}.`

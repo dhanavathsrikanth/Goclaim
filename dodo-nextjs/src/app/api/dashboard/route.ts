@@ -5,6 +5,7 @@ import {
   getBoardListings,
   getClicksByDay,
   getReferralBreakdown,
+  getUtmBreakdown,
   calculateRoiMetrics,
   getPaymentsByListingId,
   getActiveSponsor,
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
 
     const clicksByDay = await getClicksByDay(listing.id, 30);
     const referralBreakdown = await getReferralBreakdown(listing.id, listing.click_count);
+    const utmBreakdown = await getUtmBreakdown(listing.id);
     const roi = calculateRoiMetrics(listing.total_bid, listing.click_count);
 
     items.push({
@@ -55,6 +57,7 @@ export async function GET(req: NextRequest) {
       ranks,
       clicks_by_day: clicksByDay,
       referral_breakdown: referralBreakdown,
+      utm_breakdown: utmBreakdown,
       roi,
       payments: await getPaymentsByListingId(listing.id),
       ad_live: liveId === listing.id,

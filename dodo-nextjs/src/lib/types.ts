@@ -16,6 +16,7 @@ export type Listing = {
   logo_url: string;
   slug: string;
   creative_approved: boolean;
+  claimed_free: boolean;
   promo_code?: string;
   promo_offer?: string;
   demo_url?: string;
@@ -122,6 +123,14 @@ export type ReferralSourceBreakdown = {
   percentage: number;
   icon?: string;
   color?: string;
+};
+
+export type UtmBreakdown = {
+  source: string;
+  medium: string;
+  campaign: string;
+  count: number;
+  percentage: number;
 };
 
 export type RoiMetrics = {

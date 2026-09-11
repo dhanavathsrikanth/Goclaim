@@ -158,7 +158,13 @@ export default function LeaderboardRow({
               <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground">↗</span>
             </a>
             <p className="shrink-0 text-sm md:text-base font-semibold tabular-nums text-foreground">
-              ${listing.total_bid.toLocaleString()}
+              {listing.claimed_free ? (
+                <span className="inline-block rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-xs md:text-sm font-bold text-emerald-600">
+                  FREE
+                </span>
+              ) : (
+                <>${listing.total_bid.toLocaleString()}</>
+              )}
             </p>
           </div>
           {listing.description && (

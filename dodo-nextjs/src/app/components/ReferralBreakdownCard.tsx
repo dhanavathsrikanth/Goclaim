@@ -1,17 +1,20 @@
 "use client";
 
-import type { ReferralSourceBreakdown } from "@/lib/types";
+import type { ReferralSourceBreakdown, UtmBreakdown } from "@/lib/types";
 
 type Props = {
   breakdown: ReferralSourceBreakdown[];
   totalClicks: number;
+  utm?: UtmBreakdown[];
+  listingSlug?: string;
 };
 
-export default function ReferralBreakdownCard({ breakdown, totalClicks }: Props) {
+export default function ReferralBreakdownCard({ breakdown, totalClicks, utm, listingSlug }: Props) {
   const sources = breakdown && breakdown.length > 0 ? breakdown : [];
+  const utmRows = (utm && utm.length > 0 ? utm : []).filter((u) => u.source !== "(direct)");
 
   return (
-    <div className="rounded-xl bg-card border border-border p-5 shadow-xs">
+    <div className="rounded-xl bg-card border border-border p-4 sm:p-5 shadow-xs">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-border/60">
         <div>
@@ -106,6 +109,56 @@ export default function ReferralBreakdownCard({ breakdown, totalClicks }: Props)
       <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
         <span>Includes All-time, Today, Category, and Listing page redirects.</span>
         <span className="font-medium text-primary">Live Real-Time Attribution</span>
+      </div>
+
+      {/* UTM Campaign Attribution */}
+      <div className="mt-4 pt-4 border-t border-border/60">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400 text-sm">📣</span>
+          <h4 className="text-sm font-bold text-foreground">UTM Campaigns</h4>
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          Share your listing link with UTM tags and see exactly which post drove each click.
+        </p>
+        {utmRows.length === 0 ? (
+          <div className="mt-3 rounded-lg bg-muted/40 border border-border/60 p-3">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              No tagged clicks yet. Share links like:
+            </p>
+            <code className="mt-1.5 block truncate rounded-md bg-background border border-border px-2 py-1.5 font-mono text-[10px] text-foreground">
+              /listings/{listingSlug || "<slug>"}?utm_source=x&amp;utm_medium=post&amp;utm_campaign=launch
+            </code>
+          </div>
+        ) : (
+          <div className="mt-3 divide-y divide-border/40">
+            {utmRows.map((u, i) => (
+              <div
+                key={`${u.source}-${u.medium}-${u.campaign}-${i}`}
+                className="py-2 flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="min-w-0">
+                  <span className="font-semibold text-foreground truncate block">
+                    {u.source}
+                    {u.medium ? <span className="font-normal text-muted-foreground"> · {u.medium}</span> : null}
+                  </span>
+                  {u.campaign && (
+                    <span className="text-[10px] text-muted-foreground font-mono truncate block">
+                      {u.campaign}
+                    </span>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-bold text-foreground tabular-nums">
+                    {u.count.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground ml-1">
+                    ({u.percentage}%)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

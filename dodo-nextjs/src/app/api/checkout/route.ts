@@ -13,9 +13,12 @@ import {
   consumeCoupon,
   hasEmailUsedCoupon,
   hasDomainUsedCoupon,
+  getConfirmedListingCount,
 } from "@/lib/data";
+import { FOUNDING_FREE_LIMIT, FOUNDING_TAG } from "@/lib/promo";
 import { getCurrentTopBid } from "@/lib/ranking";
 import { createClaimToken } from "@/lib/claim";
+import { sendListingConfirmedEmail } from "@/lib/email";
 import { processOutbidAlerts } from "@/lib/outbidAlerts";
 import { processMilestoneSocialAlert } from "@/lib/socialBot";
 import { CATEGORIES } from "@/lib/types";
@@ -78,9 +81,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ---- FREE COUPON CLAIM (no Dodo, no invite chain) ----
+    // ---- FREE CLAIM: coupon code OR founding-free slots (no Dodo) ----
     // Strict rules: new domains only, starter $2 only, 1 per domain, 1 per email.
-    if (rawCoupon) {
+    // Founding: first FOUNDING_FREE_LIMIT confirmed listings are free, no code.
+    const wantFounding = !rawCoupon && body.free_founding === true;
+    if (rawCoupon || wantFounding) {
       const couponErrors: Record<string, string> = {
         COUPON_INVALID: "That code doesn't exist. Check spelling.",
         COUPON_EXPIRED: "That code has expired.",
@@ -90,8 +95,9 @@ export async function POST(req: NextRequest) {
         COUPON_EMAIL_INVALID: "Enter a valid email for the free claim.",
         COUPON_EMAIL_USED: "This email already claimed a free listing.",
         COUPON_DOMAIN_USED: "This domain / handle already claimed a free listing.",
-        COUPON_REBID_NOT_ALLOWED: "Free codes are for new listings only — this URL is already ranked. Raise it with a paid bid.",
-        COUPON_STARTER_ONLY: "Free codes cover a $2 starter listing only. Paid bids take higher ranks.",
+        COUPON_REBID_NOT_ALLOWED: "Free claims are for new listings only — this URL is already ranked. Raise it with a paid bid.",
+        COUPON_STARTER_ONLY: "Free claims cover a $2 starter listing only. Paid bids take higher ranks.",
+        FOUNDING_ENDED: "Free launch slots are gone — use a coupon code or a paid bid.",
       };
       const couponFail = (code: string, status = 400) =>
         NextResponse.json(
@@ -99,19 +105,29 @@ export async function POST(req: NextRequest) {
           { status }
         );
 
-      const coupon = await getCoupon(rawCoupon);
-      if (!coupon) return couponFail("COUPON_INVALID", 404);
-      if (!coupon.active) return couponFail("COUPON_INACTIVE");
-      if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
-        return couponFail("COUPON_EXPIRED");
-      if (coupon.uses >= coupon.max_uses) return couponFail("COUPON_EXHAUSTED");
+      // Resolve the free grant: coupon amount or founding $2.
+      let freeAmount = 2;
+      let freeTag = FOUNDING_TAG;
+      if (rawCoupon) {
+        const coupon = await getCoupon(rawCoupon);
+        if (!coupon) return couponFail("COUPON_INVALID", 404);
+        if (!coupon.active) return couponFail("COUPON_INACTIVE");
+        if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
+          return couponFail("COUPON_EXPIRED");
+        if (coupon.uses >= coupon.max_uses) return couponFail("COUPON_EXHAUSTED");
+        freeAmount = coupon.amount;
+        freeTag = coupon.code;
+      } else {
+        const count = await getConfirmedListingCount();
+        if (count >= FOUNDING_FREE_LIMIT) return couponFail("FOUNDING_ENDED");
+      }
 
       if (!rawEmail) return couponFail("COUPON_EMAIL_REQUIRED");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail))
         return couponFail("COUPON_EMAIL_INVALID");
 
-      // Starter-only: free covers exactly the coupon amount ($2).
-      if (bidAmount !== coupon.amount || (validation.amountToPay || bidAmount) !== coupon.amount)
+      // Starter-only: free covers exactly the grant amount ($2).
+      if (bidAmount !== freeAmount || (validation.amountToPay || bidAmount) !== freeAmount)
         return couponFail("COUPON_STARTER_ONLY");
 
       const normalizedForCoupon = normalizeUrl(url);
@@ -123,9 +139,15 @@ export async function POST(req: NextRequest) {
       if (await hasEmailUsedCoupon(rawEmail))
         return couponFail("COUPON_EMAIL_USED");
 
-      // Atomic claim — loses race = exhausted.
-      const claimed = await consumeCoupon(rawCoupon);
-      if (!claimed) return couponFail("COUPON_EXHAUSTED");
+      if (rawCoupon) {
+        // Atomic claim — loses race = exhausted.
+        const claimed = await consumeCoupon(rawCoupon);
+        if (!claimed) return couponFail("COUPON_EXHAUSTED");
+      } else {
+        // Re-check founding slots right before writing (race guard).
+        const recount = await getConfirmedListingCount();
+        if (recount >= FOUNDING_FREE_LIMIT) return couponFail("FOUNDING_ENDED");
+      }
 
       // Build / reuse listing, confirm instantly at $2 rank value.
       const xHandleC = extractXHandle(url) || extractXHandle(normalizedForCoupon);
@@ -173,7 +195,7 @@ export async function POST(req: NextRequest) {
         description: existingForCoupon?.description ?? "",
         favicon_url: faviconUrlC,
         category,
-        total_bid: coupon.amount,
+        total_bid: freeAmount,
         click_count: existingForCoupon?.click_count ?? 0,
         created_at: existingForCoupon?.created_at ?? nowIso,
         updated_at: nowIso,
@@ -182,17 +204,18 @@ export async function POST(req: NextRequest) {
         banner_url: existingForCoupon?.banner_url ?? "",
         logo_url: existingForCoupon?.logo_url ?? "",
         creative_approved: existingForCoupon?.creative_approved ?? false,
+        claimed_free: true,
         slug: slugC,
       };
       await upsertListing(listingRow);
       await upsertPayment({
         id: paymentIdC,
         listing_id: listingIdC,
-        checkout_session_id: `coupon_${rawCoupon}`,
-        amount: coupon.amount,
+        checkout_session_id: rawCoupon ? `coupon_${freeTag}` : "founding_free",
+        amount: freeAmount,
         status: "confirmed",
         created_at: nowIso,
-        coupon_code: rawCoupon,
+        coupon_code: freeTag,
       });
 
       // Feed activity / alerts (best-effort, never blocks claim).
@@ -213,12 +236,35 @@ export async function POST(req: NextRequest) {
         claimToken = createClaimToken(rawEmail);
       } catch {}
 
+      // Free-claim confirmation email with private dashboard link (best-effort).
+      if (claimToken) {
+        try {
+          const rankBoard = await getBoardListings("all-time").catch(() => []);
+          const rank =
+            rankBoard && rankBoard.length > 0
+              ? rankBoard.findIndex((l) => l.id === listingIdC) + 1 || 1
+              : 1;
+          await sendListingConfirmedEmail({
+            to: rawEmail,
+            listing: listingRow,
+            rank,
+            paidAmount: 0,
+            totalBid: freeAmount,
+            claimToken,
+            category,
+          });
+        } catch (mailErr) {
+          console.warn("Free-claim confirmation email error:", mailErr);
+        }
+      }
+
       return NextResponse.json({
         free_claim: true,
         listing_id: listingIdC,
         slug: slugC,
-        amount: coupon.amount,
-        coupon: rawCoupon,
+        amount: freeAmount,
+        coupon: freeTag,
+        founding: !rawCoupon,
         claim_token: claimToken,
         listing_url: `/listings/${slugC}`,
         listing_name: productNameC,
@@ -280,6 +326,7 @@ export async function POST(req: NextRequest) {
         banner_url: "",
         logo_url: "",
         creative_approved: false,
+        claimed_free: false,
         slug: await uniqueSlug(normalizedUrl),
       };
       await upsertListing(newListing);

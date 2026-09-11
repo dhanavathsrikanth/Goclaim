@@ -102,9 +102,13 @@ export default function ConfirmRankModal({
             <span className="block truncate font-mono text-sm font-semibold text-foreground mt-0.5">
               {displayUrl}
             </span>
-            {isFree && coupon && (
+            {isFree && (
               <span className="mt-1 block text-[11px] text-muted-foreground">
-                Code <span className="font-mono font-bold text-emerald-600">{coupon}</span> applied — $0 due, $2 rank value.
+                {coupon ? (
+                  <>Code <span className="font-mono font-bold text-emerald-600">{coupon}</span> applied — $0 due, $2 rank value.</>
+                ) : (
+                  <>🎉 Launch offer — $0 due, $2 rank value.</>
+                )}
               </span>
             )}
           </div>
