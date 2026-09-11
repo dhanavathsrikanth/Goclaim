@@ -57,7 +57,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-foreground mb-3">5. Free listings &amp; coupon codes</h2>
             <ul className="space-y-2 list-disc list-inside">
               <li><strong>Launch offer:</strong> the first 20 confirmed listings claim a $2 starter free with just an email — no code needed.</li>
-              <li>Promotional codes (e.g. EARLY100) cover a $2 starter listing at no charge once launch slots run out.</li>
+              <li>Promotional codes (e.g. FIRST20) cover a $2 starter listing at no charge once launch slots run out.</li>
               <li>Strict limits: <strong>1 free claim per domain/handle, 1 per email, new listings only</strong>. Codes have a fixed number of uses and an expiry date.</li>
               <li>Free listings rank at $2 and can be outranked by any paid bid at any time.</li>
               <li>Codes are revocable. Abuse — duplicate domains, disposable-email farming, scripting, or resale of codes — results in removal of the listings without refund or compensation.</li>

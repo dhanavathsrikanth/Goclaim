@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 // Public promo status for scarcity UI. No sensitive data.
 // ?code=XXX → single coupon status (legacy).
-// no param → founding slots + EARLY100 summary (banner + form).
+// no param → founding slots + FIRST20 summary (banner + form).
 export async function GET(req: NextRequest) {
   const code = (new URL(req.url).searchParams.get("code") ?? "").trim().toUpperCase();
   if (code) {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const [count, early] = await Promise.all([
     getConfirmedListingCount(),
-    getCoupon("EARLY100"),
+    getCoupon("FIRST20"),
   ]);
   const foundingSlots = Math.max(0, FOUNDING_FREE_LIMIT - count);
   const earlyLeft = early ? Math.max(0, early.max_uses - early.uses) : 0;

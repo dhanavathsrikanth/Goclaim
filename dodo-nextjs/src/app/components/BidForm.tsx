@@ -426,7 +426,7 @@ export default function BidForm({
                   type="text"
                   value={coupon}
                   onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                  placeholder="Code (e.g. EARLY100)"
+                  placeholder="Code (e.g. FIRST20)"
                   aria-label="Coupon code"
                   className="h-11 w-full rounded-xl border border-input bg-white px-3.5 font-mono text-sm uppercase tracking-wider placeholder:normal-case placeholder:font-sans placeholder:tracking-normal focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:bg-card"
                 />

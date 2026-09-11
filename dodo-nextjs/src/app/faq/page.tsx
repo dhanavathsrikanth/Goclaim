@@ -38,7 +38,7 @@ export default function FAQPage() {
     },
     {
       q: "Is there a free way to try it?",
-      a: "Yes — the first 20 listings are FREE during launch (just an email, no code). After that, promo codes like EARLY100 cover a $2 starter. Limits: 1 free per domain/handle, 1 per email, new listings only. Free listings rank at $2 and any paid bid can outrank them.",
+      a: "Yes — the first 20 listings are FREE during launch (just an email, no code). After that, promo codes like FIRST20 cover a $2 starter. Limits: 1 free per domain/handle, 1 per email, new listings only. Free listings rank at $2 and any paid bid can outrank them.",
     },
     {
       q: "Is this a scam? Do I get customers?",
