@@ -35,7 +35,7 @@ function listingTitle(listing: Listing): string {
 
 function listingDescription(listing: Listing): string {
   const name = listing.product_name || extractDisplayUrl(listing.normalized_url);
-  return `${name} (${extractDisplayUrl(listing.normalized_url)}) holds its rank on goclaim.space with a $${listing.total_bid.toLocaleString()} bid in ${listing.category}. Outbid them to take the spot.`;
+  return `${name} (${extractDisplayUrl(listing.normalized_url)}) holds its rank on goclaim.space with a $${listing.total_bid.toLocaleString()} bid in ${listing.category}. Outrank them to take the spot.`;
 }
 
 export async function generateMetadata({

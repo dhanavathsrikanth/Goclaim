@@ -39,7 +39,7 @@ export default function TermsPage() {
               <li>To take #1 you must bid at least $5 more than the current #1.</li>
               <li>Raising an existing listing costs the difference only ($1 minimum).</li>
               <li>Ties resolve by age: the older listing keeps the higher rank.</li>
-              <li>Ranks are never exclusive or fixed-term — anyone can outbid you at any time.</li>
+              <li>Ranks are never exclusive or fixed-term — anyone can outrank you at any time.</li>
             </ul>
           </section>
 
@@ -47,7 +47,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-foreground mb-3">4. Payments &amp; refunds</h2>
             <ul className="space-y-2 list-disc list-inside">
               <li>Payments are processed by Dodo Payments. Card details go to Dodo, never to us. See our <Link href="/privacy" className="underline underline-offset-2">Privacy Policy</Link>.</li>
-              <li><strong>All payments are final and non-refundable</strong> — including if you are outbid, receive fewer clicks than hoped, or your listing is removed for violating these terms.</li>
+              <li><strong>All payments are final and non-refundable</strong> — including if you are outranked, receive fewer clicks than hoped, or your listing is removed for violating these terms.</li>
               <li>Prices are in USD. Any taxes, VAT, or fees are your responsibility and may be collected at checkout.</li>
               <li>Chargebacks or payment reversals may result in removal of the listing and a ban on future listings. Amounts recovered by fraud will not be re-credited as rank.</li>
             </ul>

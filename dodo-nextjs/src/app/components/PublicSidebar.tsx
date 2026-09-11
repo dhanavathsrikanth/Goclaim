@@ -104,7 +104,7 @@ export default function PublicSidebar() {
               <span>The Platform Rule</span>
             </div>
             <p className="text-[#6B6964] leading-relaxed">
-              Rank is strictly what you pay — nothing else. Own your spot by outbidding the competition.
+              Rank is strictly what you pay — nothing else. Own your spot by outranking the competition.
             </p>
           </div>
         </div>

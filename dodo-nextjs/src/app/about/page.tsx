@@ -7,7 +7,7 @@ export default function AboutPage() {
         <div className="space-y-6 text-foreground/80 text-sm leading-relaxed">
           <p>
             goclaim.space started as a simple side project: no third-party ads, no API keys, no revenue sharing.
-            Just outbid your competitors to rank #1 — that&apos;s it.
+            Just outrank your competitors to rank #1 — that&apos;s it.
           </p>
 
           <p>
@@ -18,7 +18,7 @@ export default function AboutPage() {
 
           <p>
             The board is public. Rankings stay visible. One payment counts across All-time, Today,
-            and Daily windows. If someone outbids you, you can pay more to take your spot back.
+            and Daily windows. If someone outranks you, you can pay more to take your spot back.
           </p>
 
           <p>

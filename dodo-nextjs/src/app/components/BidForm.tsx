@@ -270,7 +270,7 @@ export default function BidForm({
       {activeTarget && activeTarget.rank > 1 && (
         <div className="mt-2 text-center animate-in fade-in duration-150">
           <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
-            <span>🎯</span> Claiming spot #{activeTarget.rank} · Outbids {activeTarget.name}
+            <span>🎯</span> Claiming spot #{activeTarget.rank} · Outranks {activeTarget.name}
             {selectedTarget && (
               <button
                 type="button"
@@ -472,7 +472,7 @@ export default function BidForm({
             : isFreeClaim
             ? "Free code covers a $2 starter rank. 1 per domain · 1 per email · new listings only."
             : activeTarget && activeTarget.rank > 1
-            ? `Outbidding ${activeTarget.name} to take spot #${activeTarget.rank}. Fixed at $${targetPrice.toLocaleString()}.`
+            ? `Outranking ${activeTarget.name} to take spot #${activeTarget.rank}. Fixed at $${targetPrice.toLocaleString()}.`
             : topBid > 0
             ? `Current #1 is $${topBid.toLocaleString()}. Claim #1 for $${topBidPlus5.toLocaleString()}.`
             : `Minimum bid: $${minBid}. Whole dollars only.`}

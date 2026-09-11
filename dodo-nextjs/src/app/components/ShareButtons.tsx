@@ -10,7 +10,7 @@ type Props = {
 export default function ShareButtons({ pageUrl, productName, bid }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const text = `${productName} holds its rank on goclaim.space with a $${bid.toLocaleString()} bid. Outbid them.`;
+  const text = `${productName} holds its rank on goclaim.space with a $${bid.toLocaleString()} bid. Outrank them.`;
   const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(pageUrl)}`;
 
   async function copy() {

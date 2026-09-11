@@ -2,7 +2,7 @@ export default function FAQPage() {
   const faqs = [
     {
       q: "What is goclaim.space?",
-      a: "A public leaderboard where position is determined by how much you pay. There are no third-party ads, no API keys, and no revenue sharing. Just outbid your competitors to rank #1.",
+      a: "A public leaderboard where position is determined by how much you pay. There are no third-party ads, no API keys, and no revenue sharing. Just outrank your competitors to rank #1.",
     },
     {
       q: "How do I get on the board?",
@@ -42,7 +42,7 @@ export default function FAQPage() {
     },
     {
       q: "Is this a scam? Do I get customers?",
-      a: "No scam, but no promises either. You pay for a public rank — not for traffic, customers, or revenue. Anyone can outbid you at any time, and all payments are final. Rank signals who paid most, nothing more.",
+      a: "No scam, but no promises either. You pay for a public rank — not for traffic, customers, or revenue. Anyone can outrank you at any time, and all payments are final. Rank signals who paid most, nothing more.",
     },
     {
       q: "What content is banned?",

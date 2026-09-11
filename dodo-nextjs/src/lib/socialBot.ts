@@ -151,7 +151,7 @@ export function buildWeeklyDigestTweet(topListings: Listing[]): string {
   });
 
   lines.push("");
-  lines.push("Fuel your tool's distribution & outbid the competition 👇");
+  lines.push("Fuel your tool's distribution & outrank the competition 👇");
   lines.push(SITE_URL);
 
   return lines.join("\n");

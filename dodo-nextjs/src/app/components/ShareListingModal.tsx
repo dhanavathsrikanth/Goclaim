@@ -49,7 +49,7 @@ export default function ShareListingModal({
   // utm_source=x / copy in their dashboard UTM breakdown.
   const xUrl = `${origin}${pagePath}?utm_source=x&utm_medium=share&utm_campaign=launch`;
   const copyUrl = `${origin}${pagePath}?utm_source=copy&utm_medium=share&utm_campaign=launch`;
-  const tweetText = `I just claimed ${listingName} on Outbid for FREE — rank is what you pay. Claim yours before it's gone:`;
+  const tweetText = `I just claimed ${listingName} on goclaim.space for FREE — rank is what you pay. Claim yours before it's gone:`;
   const xIntent = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(xUrl)}`;
 
   async function handleCopy() {
@@ -104,7 +104,7 @@ export default function ShareListingModal({
           <span className="font-semibold text-foreground">{listingName}</span>
           <span className="block truncate font-mono text-[11px] sm:text-xs mt-0.5">{displayUrl}</span>
           is now ranked at <span className="font-mono font-bold text-foreground">$2</span>.
-          Paid bids outrank free — share it before someone outbids you.
+          Paid bids outrank free — share it before someone outranks you.
         </p>
 
         <div className="mt-5 flex flex-col gap-2.5">

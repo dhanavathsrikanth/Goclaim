@@ -36,7 +36,7 @@ export default function PrivacyPage() {
             <ul className="space-y-2 list-disc list-inside">
               <li>Operate the leaderboard: rank listings, track clicks, issue dashboard claim links, announce winners.</li>
               <li>Enforce coupon limits (1 per domain, 1 per email) and detect fraud/abuse.</li>
-              <li>Process outbid alerts and milestone announcements you trigger by bidding.</li>
+              <li>Process rank-change alerts and milestone announcements you trigger by bidding.</li>
               <li>Security, debugging, and legal compliance.</li>
             </ul>
           </section>

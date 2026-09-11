@@ -211,7 +211,7 @@ export function generateOutbidHtml(params: OutbidAlertParams): string {
   const preheader = `Reclaim ${rankLabel} for +$${differenceAmount.toLocaleString()} — 1-click checkout inside.`;
 
   const bodyHtml = `
-          ${emailEyebrow({ label: "⚡ Goclaim · Outbid alert", pill: category })}
+          ${emailEyebrow({ label: "⚡ GoClaim · Rank alert", pill: category })}
 
           <tr>
             <td class="email-pad" style="padding: 28px 30px 24px;">
@@ -284,7 +284,7 @@ export function generateOutbidHtml(params: OutbidAlertParams): string {
             reason: `You're getting this because <strong style="color:#d6d3d1;">${overtakenName}</strong> lists this email for bid alerts. Reply to this email to contact us.`,
           })}`;
 
-  return emailDocument({ title: "Outbid Alert", preheader, bodyHtml });
+  return emailDocument({ title: "Rank Alert", preheader, bodyHtml });
 }
 
 export function generateOutbidText(params: OutbidAlertParams): string {
@@ -304,7 +304,7 @@ export function generateOutbidText(params: OutbidAlertParams): string {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://goclaim.space";
 
-  return `OUTBID ALERT — You just lost ${rankLabel}
+  return `RANK ALERT — You just lost ${rankLabel}
 
 ${outbidByName} placed a $${outbidByTool.total_bid.toLocaleString()} bid and passed ${overtakenName} on the ${category} board.
 
@@ -359,7 +359,7 @@ export function generateListingConfirmedHtml(params: ListingConfirmedParams): st
     {
       n: "1",
       title: "Watch your rank live",
-      body: "Your listing is on the public board now. If someone outbids you, we'll email you instantly with a 1-click reclaim link.",
+      body: "Your listing is on the public board now. If someone outranks you, we'll email you instantly with a 1-click reclaim link.",
     },
     {
       n: "2",
@@ -479,7 +479,7 @@ View your live listing:
 ${listingUrl}
 
 What happens next:
-1. If someone outbids you, we email you instantly with a 1-click reclaim link.
+1. If someone outranks you, we email you instantly with a 1-click reclaim link.
 2. Track traffic trends and CPC savings in your dashboard.
 3. Embed your live rank badge on your README or site.
 

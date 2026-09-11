@@ -124,7 +124,7 @@ export async function announceTakeover(newLead: {
 }, prevLeadName?: string) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://goclaim.space";
   const link = newLead.slug ? `${siteUrl}/listings/${newLead.slug}` : newLead.url;
-  const vs = prevLeadName ? `outbid ${prevLeadName}` : "taken the lead";
+  const vs = prevLeadName ? `outranked ${prevLeadName}` : "taken the lead";
   const tweetText = `⚔️ TAKEOVER ALERT! ${newLead.product_name} has ${vs} with a $${newLead.total_bid} bid to claim #1 on Goclaim!\n\nCheck out the action live: 👇\n${link}`;
 
   return await postSocialProof(tweetText);
